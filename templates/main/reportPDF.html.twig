@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>INFORME PENSIÓN - RÉGIMEN DE PRIMA MEDIA</title>
+    <link rel="shortcut icon" href="https://app.liquigator.digital/img/LIQUIGATOR_.png"
+          type="image/x-icon">
+
+    <style type="text/css">
+        @page {
+            margin: 0cm 0cm;
+        }
+
+        /** Define now the real margins of every page in the PDF **/
+        body {
+            margin-top: 2.54cm;
+            margin-left: 2.54cm;
+            margin-right: 2.54cm;
+            margin-bottom: 2.54cm;
+        }
+
+        * {
+            font-family: Verdana, Arial, sans-serif;
+        }
+
+        table {
+            font-size: small;
+        }
+
+        tfoot tr td {
+            font-weight: bold;
+            font-size: small;
+        }
+
+        .gray {
+            background-color: lightgray
+        }
+
+        /** Define the header rules **/
+        header {
+            position: fixed;
+            top: 1cm;
+            left: 1cm;
+            right: 2.54cm;
+            height: 3cm;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0cm;
+            left: 0cm;
+            right: 0cm;
+            height: 2cm;
+        }
+
+    </style>
+
+</head>
+<body>
+<header>
+    <p style="text-align: right"><img src="https://app.liquigator.digital/img/LIQUIGATOR_2.png" alt="" width="100px">
+    </p>
+</header>
+<main>
+    <table style="width: 100%">
+        <tr>
+            <td valign="top"><img src="https://via.placeholder.com/150x150.png?text=LOGO AQUÍ"
+                                  width="150"/>
+
+            </td>
+            <td align="right">
+                <h2>INFORME PENSIÓN # <b>{{ info.id|strpad(5,'0') }}</b> <BR>RÉGIMEN DE PRIMA MEDIA</h2>
+                <h3>{{ info.fullName }}</h3>
+                <span>
+                Elaborado por: <b>{{ info.user.fullName }}</b><br>
+                Fecha de elaboración: <b>{{ "now"|date('d M Y') }}</b>
+            </span>
+            </td>
+        </tr>
+
+    </table>
+    <table width="100%">
+        <tr>
+            <td width="50%" valign="top">
+                <h3>OBJETO</h3>
+                <ul>
+                    <li>Determinar el valor o monto de la pensión que obtendría en {{ info.fondo|capitalize }} de no
+                        efectuar más cotizaciones.
+                    </li>
+                    <li>Proyectar el monto al efectuar cotizaciones 5 años por el máximo legal permitido de 25 Salarios
+                        Mínimos Mensuales Legales Vigentes. ( S.M.M.L.V.).
+                    </li>
+                    <li>Analizar conveniencia.
+                    </li>
+                </ul>
+
+            </td>
+            <td width="50%" valign="top">
+                <h3>SUPUESTOS</h3>
+                <ul>
+                    <li><strong>Fecha Nacimiento:</strong> {{ info.birthdate|date('d M Y') }}</li>
+                    <li><B>Fondo de Pensiones:</B> {{ info.fondo|capitalize }}</li>
+                    <li><b>Números de semanas a la fecha: </b> {{ info.totalWeeks|round(2) }}</li>
+                    <li>Posibilidad de cotizar por 25 S.M.M.L.V</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <h4>TÉCNICA UTILIZADA</h4>
+                <ul>
+                    <li>Para la liquidación de la pensión en el Régimen de Prima Media (RPM) se siguen los parámetros
+                        que
+                        indica la Ley 100 de 1993 ( Modificada por la Ley 797 de 2003) en sus artículos 21 y 36:
+                    </li>
+                    <li>
+                        Se obtiene el promedio salarial de los <u>últimos 10 años</u>, a lo que se le denomina IBL
+                        (Ingreso
+                        Base de Liquidación)
+                    </li>
+                    <li>Se deben actualizar los salarios al año de liquidación de acuerdo al IPC acumulado.</li>
+                    <li>Una vez actualizado el IBL se le aplica una tasa de reemplazo desarrollando la fórmula r= 65,5%-
+                        (s*0,5%) donde “s” es igual al número de salarios mínimos que representa el IBL.
+                    </li>
+                    <li>De acuerdo al artículo 10 de ley 797 de 2003, el porcentaje se incrementará en 1,5% del IBL por
+                        cada
+                        50 semanas adicionales.
+                    </li>
+                </ul>
+                <small>NOTA: Todas las cifras deben ser actualizadas por inflación cada año.</small>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <h4>REQUISITOS PARA LA PENSIÓN</h4>
+                <p>La Ley 100 de 1993 y sus modificaciones tienen establecidos como requisitos para obtener la pensión
+                    los siguientes:</p>
+                <ol type="A">
+                    <li>Edad: Para las mujeres 57 años de edad</li>
+                    <li>Tiempo: 1.300 semanas cotizadas</li>
+                </ol>
+            </td>
+        </tr>
+    </table>
+    <br/>
+    <table width="100%">
+        <tr>
+            <td><h4>DETALLE</h4></td>
+        </tr>
+        <tr style="font-size: x-small">
+            <td width="50%" valign="top">
+
+                <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th>IBL</th>
+                        <td style="text-align: right">{{ info.resume['IBL'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">{{ info.resume['R'] }}</td>
+                        <td style="text-align: right">{{ info.resume['R1'] }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <th style="text-align: center">{{ info.resume['X'] }}</th>
+                        <th style="text-align: right">{{ info.resume['R2'] }}</th>
+                    </tr>
+                </table>
+            </td>
+            <td width="50%" valign="top">
+                <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th style="text-align: center">S</th>
+                        <td style="text-align: right">{{ info.resume['S'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>S.M.M.L.V</th>
+                        <td style="text-align: right">{{ smmlv|number_format(0) }}</td>
+                    </tr>
+                </table>
+                <br>
+                <table  width="100%" border="0.1" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th>% BÁSICO</th>
+                        <th>% ADICIONAL</th>
+
+                    </tr>
+                    <tr>
+                        <td>r=65,5%-(s*0,5%)</td>
+                        <td>{{ info.totalWeeks|round(2) }} <small style="float: right">Semanas</small></td>
+                    </tr>
+                    <tr>
+                        <td>65,50%</td>
+                        <td>1300 <small style="float: right">Básicas</small></td>
+                    </tr>
+                    <tr>
+                        <td>{{ info.resume['Porcentaje Adicional'] }}</td>
+                        <td>{{ info.resume['Semanas Adicionales'] }} <small style="float: right">Adicionales</small></td>
+
+                    </tr>
+                    <tr>
+                        <td>{{ info.resume['IBL'] }}</td>
+                        <td>1.5%</td>
+                    </tr>
+                    <tr style="background-color: lightgray">
+                        <th>SUMA</th>
+                        <td>{{ info.resume['X'] }}</td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+    <br>
+    <table width="100%">
+        <tr>
+            <td colspan="3"><h4>TÉRMINOS UTILIZADOS</h4></td>
+        </tr>
+        <tr style="font-size: small">
+            <th>SIGLA</th>
+            <th>NOMBRE</th>
+            <th>DESCRIPCIÓN</th>
+        </tr>
+        <tr style="font-size: small">
+            <td>I.B.L</td>
+            <td>Ingreso Base de Liquidación</td>
+            <td> Promedio actualizado salarios últimos diez años</td>
+        </tr>
+        <tr style="font-size: small">
+            <td>r</td>
+            <td>Tasa de reemplazo</td>
+            <td> Porcentaje que se le aplica al IBL para obtener el valor de la pensión.</td>
+        </tr>
+        <tr style="font-size: small">
+            <td>s</td>
+            <td>Número de salarios</td>
+            <td>El IBL se divide por el valor del salario mínimo vigente</td>
+        </tr>
+        <tr style="font-size: small">
+            <td>Básicas</td>
+            <td>Semanas Básicas</td>
+            <td>1.300</td>
+        </tr>
+        <tr style="font-size: small">
+            <td >Adicionales</td>
+            <td> Semanas Adicionales</td>
+            <td>Grupos de 50 que superen 1.300</td>
+        </tr>
+        <tr style="font-size: small">
+            <td>R.P.M</td>
+            <td> Régimen de Prima Media</td>
+            <td>Régimen de pensiones administrado por {{ info.fondo|capitalize }}</td>
+        </tr>
+
+
+        <tr>
+            <td colspan="3">
+                <h4>CONCLUSIONES</h4>
+                {{ conclusiones|raw }}
+            </td>
+
+        </tr>
+    </table>
+</main>
+</body>
+</html>

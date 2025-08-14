@@ -1,0 +1,52 @@
+# Laravel / PHP
+/vendor/
+.env
+.env.*
+/bootstrap/cache/*
+/storage/*.key
+/storage/app/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+!/storage/app/public/
+/public/storage
+.phpunit.result.cache
+composer.lock
+
+# Node / Frontend
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/public/hot
+/public/storage
+/public/build
+/.vite
+
+# IDE / SO
+.DS_Store
+.idea/
+.vscode/
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> symfony/phpunit-bridge ###
+.phpunit
+.phpunit.result.cache
+/phpunit.xml
+/.idea/
+.idea/
+.idea
+.idea/*
+
+###< symfony/phpunit-bridge ###
+public/upload

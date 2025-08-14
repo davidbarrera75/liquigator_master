@@ -1,0 +1,115 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liquigator!{% endblock %}
+
+{% block body %}
+    <div class="card col-12">
+        <div class="card-body">
+            <h3 class="card-title text-center">LIQUIDACIÓN PENSIÓN RÉGIMEN DE PRIMA MEDIA <br>
+                <b>{{ info.fullName }}</b> <br> <small>Fecha Nacimiento: {{ info.birthdate|date('d/m/Y') }} -
+                    Edad: {{ info.edad }} años </small>
+            </h3>
+            <h4 class="text-center text-primary text-uppercase">{{ info.fondo }}</h4>
+            <p>Fecha del Informa <b>{{ info.createdAt|date('d/m/Y g:i a') }}</b></p>
+            <form method="post" class="input-group col-sm-5 float-right"
+                  action="{{ path('client_weeks_update', {'uniqid': info.uniqId}) }}">
+                <span class="input-group-text">Total Semanas</span>
+                <input type="text" class="form-control" name="semanas_act" id="semanas_act"
+                       placeholder="{{ info.totalWeeks }}"
+                       aria-label="semanas"
+                       value="{{ info.totalWeeks }}"
+                >
+                <span class="input-group-btn">
+            		<button class="btn btn-dark" type="submit" aria-label="semanas">Actualizar</button>
+              </span>
+            </form>
+            <div class="table-responsive pt-2">
+                <table class="table table-bordered table-striped small table-sm">
+                    <thead>
+                    <tr>
+                        <th>Año</th>
+                        <th>Salario</th>
+                        <th>Meses</th>
+                        <th>IPC</th>
+                        <th>Actualizado</th>
+                        <th>Actualizado por meses</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for data in data.content %}
+                        <tr>
+                            <td>{{ data.period }}</td>
+                            <td class="text-right">{{ data.val|number_format(0,'.',',') }}</td>
+                            <td class="text-right">{{ data.conteo }}</td>
+                            <td class="text-right">{{ data.ipc|number_format(7) }}</td>
+                            <td class="text-right">{{ data.actualizado|number_format(2) }}</td>
+                            <td class="text-right">{{ data.porMeses|number_format(2) }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th class="text-right">{{ data.resume.meses }}</th>
+                        <th></th>
+                        <th></th>
+                        <th class="text-right">{{ data.resume.total|number_format(2) }}</th>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="row">
+
+                <div class="col-sm-4">
+                    <table class="table table-sm">
+                        {% for key,value in ad %}
+                            <tr>
+                                <th>{{ key }}</th>
+                                <td class="text-right">{{ value }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <div class="col-sm-8">
+                    <form class="card border-primary" action="{{ path('report_pdf',{'id':info.id}) }}" method="post" target="_blank">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="conclusiones">Conclusiones</label>
+                                <textarea class="form-control" name="conclusiones" id="conclusiones"></textarea>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" id="sb" class="btn btn-primary"
+                                    >Generar Reporte</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block javascripts %}
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        $(function () {
+
+            tinymce.init({
+                selector: 'textarea#conclusiones',
+                height: 300,
+                menubar: false,
+                plugins: [
+                    'advlist autolink lists link image charmap print preview anchor',
+                    'searchreplace visualblocks code fullscreen',
+                    'insertdatetime media table paste code help wordcount'
+                ],
+                toolbar: 'undo redo | formatselect | ' +
+                    'bold italic backcolor | alignleft aligncenter ' +
+                    'alignright alignjustify | bullist numlist outdent indent | ' +
+                    'removeformat | help',
+                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+            });
+
+        })
+    </script>
+{% endblock %}

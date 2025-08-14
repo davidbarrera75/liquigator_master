@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Entity;
+
+use App\Repository\IpcRepository;
+use Doctrine\ORM\Mapping as ORM;
+use phpDocumentor\Reflection\Types\Integer;
+
+/**
+ * @ORM\Entity(repositoryClass=IpcRepository::class)
+ */
+class Ipc
+{
+    const INITIAL_YEAR = 1900;
+    const MIN_YEAR = 1967;
+    /**
+     * @ORM\Id
+     * @ORM\GeneratedValue
+     * @ORM\Column(type="integer")
+     */
+    private $id;
+
+    /**
+     * @ORM\Column(type="integer", unique=true)
+     */
+    private $anio;
+
+    /**
+     * @ORM\Column(type="decimal", precision=10, scale=4)
+     */
+    private $porcentaje;
+
+    /**
+     * @ORM\Column(type="decimal", precision=10, scale=4)
+     */
+    private $ipc;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getAnio(): ?int
+    {
+        return $this->anio;
+    }
+
+    public function setAnio(int $anio): self
+    {
+        $this->anio = $anio;
+
+        return $this;
+    }
+
+    public function getPorcentaje(): ?float
+    {
+        return $this->porcentaje;
+    }
+
+    public function setPorcentaje(string $porcentaje): self
+    {
+        $this->porcentaje = $porcentaje;
+        $this->setIpc(floatval($this->porcentaje) + 1);
+
+        return $this;
+    }
+
+    public function getIpc(): ?string
+    {
+        return $this->ipc;
+    }
+
+    private function setIpc(string $ipc): self
+    {
+        $this->ipc = $ipc;
+
+        return $this;
+    }
+
+    public function getYearCount(int $year){
+        return $year-self::INITIAL_YEAR;
+    }
+}

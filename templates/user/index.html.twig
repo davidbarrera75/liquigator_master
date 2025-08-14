@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Usuarios{% endblock %}
+
+{% block body %}
+    <h1 class="card-title">Usuarios <a href="{{ path('user_new') }}" class="btn btn-success text-right">Crear</a></h1>
+
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Nombre Completo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.roles ? user.roles|json_encode : '' }}</td>
+                <td>{{ user.fullName }}</td>
+                <td class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-primary" href="{{ path('user_show', {'id': user.id}) }}">Ver</a>
+                    <a class="btn btn-outline-dark" href="{{ path('user_edit', {'id': user.id}) }}">Editar</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

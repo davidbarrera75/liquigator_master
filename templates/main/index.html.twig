@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liquigator{% endblock %}
+
+{% block body %}
+    <div class="card col-sm-6">
+        <form method="post" action="{{ path('datos') }}" enctype="multipart/form-data" class="card-body">
+            <h4 class="card-title">Datos</h4>
+            <div class="form-group">
+                <label for="fullname">Nombres Completos</label>
+                <input type="text" required
+                       class="form-control" name="fullname" id="fullname" aria-describedby="helpId"
+                       placeholder="Nombres completos">
+                <small id="helpId" class="form-text text-muted">Nombre completo de la persona</small>
+            </div>
+            <div class="form-group">
+                <label for="identification">Documento</label>
+                <input type="number" required
+                       class="form-control" name="identification" id="identification" aria-describedby="identHelp"
+                       placeholder="Documento">
+                <small id="identHelp" class="form-text text-muted">Solo se permite numeros</small>
+            </div>
+            <div class="form-group">
+                <label for="identification">Fecha de Nacimiento</label>
+                <input type="date" required
+                       class="form-control" name="birthdate" id="birthdate"
+                       placeholder="Fecha de Nacimiento">
+            </div>
+            <div class="form-group">
+                <label for="type">Fondo de Pensiones</label>
+                <select class="form-control" name="type" id="type" required>
+                    <option value="">Seleccionar</option>
+                    {% for p in pensiones|split(',') %}
+                        <option value="{{ p }}">{{ p|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="file">Carga</label>
+                <input type="file" class="form-control-file" name="file" id="file" placeholder="Pdf" required
+                       accept="application/pdf"
+                       aria-describedby="fileHelpId">
+                <small id="fileHelpId" class="form-text text-muted">Solo se admite PDF</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+    </div>
+    <div class="card col-sm-6">
+        <div class="card-body">
+            <h4>Clientes</h4>
+            <div class="list-group">
+                {% for list in app.user.information %}
+                    <a class="list-group-item" href="{{ path('client', {'uniqid': list.uniqid}) }}">
+                    <h4>{{ list.fullName }}<small class="float-right small text-muted">{{ list.identification }}</small></h4>
+
+                        <span class="text-secondary">{{ list.fondo|capitalize }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

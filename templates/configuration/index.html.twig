@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Configuration index{% endblock %}
+
+{% block body %}
+    <h1>Configuración</h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Valor Defecto</th>
+                <th>Valores</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for configuration in configurations %}
+            <tr>
+                <td>{{ configuration.id }}</td>
+                <td>{{ configuration.name }}</td>
+                <td>{{ configuration.defaultVslue }}</td>
+                <td>{{ configuration.configValues ? configuration.configValues|json_encode : '' }}</td>
+                <td class="btn-group">
+                    <a class="btn btn-outline-primary" href="{{ path('configuration_show', {'id': configuration.id}) }}">Ver</a>
+                    <a class="btn btn-outline-primary"href="{{ path('configuration_edit', {'id': configuration.id}) }}">Editar</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('configuration_new') }}" class="btn btn-outline-danger">Nuevo</a>
+{% endblock %}
