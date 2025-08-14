@@ -29,6 +29,7 @@ class MainController extends AbstractController
     const INCREMENTO_TAZA = 0.015;
     const VARIACION_TAZA = 0.005;
     const ADICIONAL = 50;
+    const MAX_PDF_SIZE = 10485760; // 10MB
     private $uploader, $ipcService, $logger;
 
     public function __construct(FileUploader $uploader, IpcService $ipcService, LoggerInterface $logger)
@@ -60,25 +61,59 @@ class MainController extends AbstractController
         $em = $this->getDoctrine()->getManager();
         $file = $request->files->get('file');
         $name = $request->get('fullname');
+
+        if ($file->getSize() > self::MAX_PDF_SIZE) {
+            $this->logger->warning('Archivo PDF excede el tamaño máximo permitido');
+            $this->addFlash('error', 'El PDF supera el tamaño máximo permitido (10MB)');
+            return $this->redirectToRoute('main');
+        }
+
         $service = $this->uploader;
         $uploaded = $service->getTargetDirectory() . $service->upload($file);
-        $getFile = file_get_contents($uploaded);
+
+        $getFile = @file_get_contents($uploaded);
+        if ($getFile === false) {
+            $this->logger->error('No se pudo leer el archivo PDF subido');
+            $this->addFlash('error', 'Revisa tu documento e intenta más tarde');
+            return $this->redirectToRoute('main');
+        }
+
         $enco = base64_encode($getFile);
 
-        $response = file_get_contents('http://cotizador.today:33016/pdf2text/api/v1/extract', false, stream_context_create([
+        $context = stream_context_create([
             'http' => [
                 'method' => 'POST',
                 'header' => "Content-type: application/json",
-                'content' => json_encode(array('type' => $request->get('type'), 'base64' => $enco))
+                'content' => json_encode(array('type' => $request->get('type'), 'base64' => $enco)),
+                'timeout' => 30
             ]
-        ]));
-        $data = json_decode($response, 1);
+        ]);
+
+        $response = @file_get_contents('http://cotizador.today:33016/pdf2text/api/v1/extract', false, $context);
+        if ($response === false) {
+            $this->logger->error('No se pudo procesar el PDF en el servicio externo');
+            $this->addFlash('error', 'Revisa tu documento e intenta más tarde');
+            return $this->redirectToRoute('main');
+        }
+
+        $data = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->error('Respuesta inválida del servicio de extracción de PDF: '.json_last_error_msg());
+            $this->addFlash('error', 'Revisa tu documento e intenta más tarde');
+            return $this->redirectToRoute('main');
+        }
 
         $em->getConnection()->beginTransaction();
         try {
             $bog = new \DateTimeZone('America/Bogota');
             $fondo = $request->get('type');
-            $extract = $this->$fondo($data);
+            try {
+                $extract = $this->$fondo($data);
+            } catch (\Throwable $e) {
+                $this->logger->error('Error al procesar el PDF', ['exception' => $e]);
+                $this->addFlash('error', 'Revisa tu documento e intenta más tarde');
+                return $this->redirectToRoute('main');
+            }
             $birthDATE = Datetime::createFromFormat('Y-m-d', $request->get('birthdate'));
             $info = new Information();
             $info->setCreatedAt(new DateTime('now',$bog));
