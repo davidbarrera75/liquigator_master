@@ -877,6 +877,18 @@ class MainController extends AbstractController
                 $plantilla = $this->getParameter('kernel.project_dir') . '/public/files/informeLiquigatorPreliminar.docx';
                 $tipo = "InformePreliminar";
             }
+
+            // Verificar que la plantilla existe
+            if (!file_exists($plantilla)) {
+                throw new Exception("Plantilla no encontrada: $plantilla");
+            }
+
+            $this->logger->info("Generando documento Word", [
+                'plantilla' => $plantilla,
+                'tipo' => $tipo,
+                'cliente' => $information->getIdentification()
+            ]);
+
             $templateProcessor = new TemplateProcessor($plantilla);
 
             $resume = $information->getResume();
@@ -904,16 +916,42 @@ class MainController extends AbstractController
             $templateProcessor->setValues($vars);
 
             // Convertir tabla HTML a tabla Word nativa
-            $this->htmlTableToWordTable($templateProcessor, 'reporte', $request->get('tabla_datos'));
+            $tablaDatos = $request->get('tabla_datos');
+            if (empty($tablaDatos)) {
+                $this->logger->warning("tabla_datos está vacía");
+            }
+            $this->htmlTableToWordTable($templateProcessor, 'reporte', $tablaDatos);
 
-            // Convertir HTML a texto plano para conclusiones
+            // Convertir HTML a texto plano para conclusiones con saltos de línea de Word
             $conclusiones_limpias = strip_tags(str_replace(['<p>', '</p>', '<br>', '<br/>', '<br />'], "\n", $information->getConclusiones()));
+            $conclusiones_limpias = $this->escapeWordText($conclusiones_limpias);
             $templateProcessor->setValue('conclusiones', $conclusiones_limpias);
 
             $publicDirectory = $this->container->get('parameter_bag')->get('reports');
+
+            // Verificar que el directorio de reportes existe y tiene permisos
+            if (!is_dir($publicDirectory)) {
+                throw new Exception("Directorio de reportes no existe: $publicDirectory");
+            }
+            if (!is_writable($publicDirectory)) {
+                throw new Exception("Directorio de reportes sin permisos de escritura: $publicDirectory");
+            }
+
             $name = $tipo . '-' . $information->getIdentification() . '-' . uniqid() . '.docx';
             $fullFilePath = $publicDirectory . $name;
+
+            $this->logger->info("Guardando documento Word", ['path' => $fullFilePath]);
             $templateProcessor->saveAs($fullFilePath);
+
+            // Verificar que el archivo se creó correctamente
+            if (!file_exists($fullFilePath)) {
+                throw new Exception("El documento no se pudo crear: $fullFilePath");
+            }
+
+            $fileSize = filesize($fullFilePath);
+            if ($fileSize < 1000) {
+                $this->logger->warning("Documento Word muy pequeño", ['size' => $fileSize, 'path' => $fullFilePath]);
+            }
             $bog = new DateTimeZone('America/Bogota');
             $report = new PDFReport();
             $report->setCreatedAt(new DateTime('now', $bog));
@@ -1599,6 +1637,21 @@ class MainController extends AbstractController
     }
 
     /**
+     * Escapa texto para insertar en Word con saltos de línea correctos
+     * Usa el carácter de salto suave que Word interpreta correctamente
+     */
+    private function escapeWordText(string $text): string
+    {
+        // Normalizar saltos de línea
+        $text = str_replace("\r\n", "\n", $text);
+        $text = str_replace("\r", "\n", $text);
+        // Convertir \n a salto de línea suave (soft return / vertical tab)
+        // PHPWord maneja esto correctamente
+        $text = str_replace("\n", "\v", $text);
+        return $text;
+    }
+
+    /**
      * Convierte una tabla HTML a tabla Word nativa
      */
     private function htmlTableToWordTable($templateProcessor, $placeholder, $htmlTable)
@@ -1614,7 +1667,7 @@ class MainController extends AbstractController
 
         $textTable = '';
         $columnWidths = [];
-        
+
         // Procesar encabezados para calcular anchos
         $thead = $dom->getElementsByTagName('thead')->item(0);
         $headers = [];
@@ -1629,7 +1682,7 @@ class MainController extends AbstractController
                 }
             }
         }
-        
+
         // Recopilar todas las filas para calcular anchos máximos
         $allRows = [];
         $tbody = $dom->getElementsByTagName('tbody')->item(0);
@@ -1648,37 +1701,40 @@ class MainController extends AbstractController
                 $allRows[] = $cells;
             }
         }
-        
+
         // Limitar ancho de columnas a 30 caracteres para evitar líneas muy largas
         foreach ($columnWidths as &$width) {
             if ($width > 30) $width = 30;
             if ($width < 10) $width = 10; // Ancho mínimo
         }
-        
+
+        // Usar salto de línea suave (soft return) que Word entiende
+        $lineBreak = "\v";
+
         // Construir encabezados
         if (!empty($headers)) {
             foreach ($headers as $index => $header) {
                 $width = $columnWidths[$index];
                 $textTable .= str_pad(substr($header, 0, $width), $width) . ' | ';
             }
-            $textTable = rtrim($textTable) . "\n";
-            
+            $textTable = rtrim($textTable) . $lineBreak;
+
             // Línea separadora
             foreach ($columnWidths as $width) {
                 $textTable .= str_repeat('-', $width) . '-+-';
             }
-            $textTable = rtrim($textTable, '-+') . "\n";
+            $textTable = rtrim($textTable, '-+') . $lineBreak;
         }
-        
+
         // Construir filas de datos
         foreach ($allRows as $cells) {
             foreach ($cells as $index => $cell) {
                 $width = isset($columnWidths[$index]) ? $columnWidths[$index] : 20;
                 $textTable .= str_pad(substr($cell, 0, $width), $width) . ' | ';
             }
-            $textTable = rtrim($textTable) . "\n";
+            $textTable = rtrim($textTable) . $lineBreak;
         }
-        
+
         // Procesar footer si existe
         $tfoot = $dom->getElementsByTagName('tfoot')->item(0);
         if ($tfoot) {
@@ -1688,15 +1744,15 @@ class MainController extends AbstractController
                 foreach ($columnWidths as $width) {
                     $textTable .= str_repeat('=', $width) . '=+=';
                 }
-                $textTable = rtrim($textTable, '=+') . "\n";
-                
+                $textTable = rtrim($textTable, '=+') . $lineBreak;
+
                 $ths = $footerRow->getElementsByTagName('th');
                 foreach ($ths as $index => $th) {
                     $text = trim($th->textContent);
                     $width = isset($columnWidths[$index]) ? $columnWidths[$index] : 20;
                     $textTable .= str_pad(substr($text, 0, $width), $width) . ' | ';
                 }
-                $textTable = rtrim($textTable) . "\n";
+                $textTable = rtrim($textTable) . $lineBreak;
             }
         }
 
