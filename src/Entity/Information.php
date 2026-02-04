@@ -101,6 +101,12 @@ class Information
      */
     private $total_days;
 
+    /**
+     * @ORM\Column(type="string", length=1, options={"default": "M"})
+     * M = Masculino, F = Femenino
+     */
+    private $genero = 'M';
+
     public function __construct()
     {
         $this->data = new ArrayCollection();
@@ -367,5 +373,27 @@ class Information
         $this->total_days = $total_days;
 
         return $this;
+    }
+
+    public function getGenero(): ?string
+    {
+        return $this->genero;
+    }
+
+    public function setGenero(string $genero): self
+    {
+        $this->genero = $genero;
+
+        return $this;
+    }
+
+    public function isMujer(): bool
+    {
+        return $this->genero === 'F';
+    }
+
+    public function getGeneroTexto(): string
+    {
+        return $this->genero === 'F' ? 'Femenino' : 'Masculino';
     }
 }

@@ -31,7 +31,7 @@
                     </li>
                     <li class="sidebar-item {% if app.request.requestUri == path('client',{'uniqid': info.uniqid}) %}active{% endif %}">
                         <a class="sidebar-link" href="{{ path('client',{'uniqid': info.uniqid}) }}">
-                            <i class="align-middle" data-feather="cpu"></i> <span class="align-middle">Resumen</span>
+                            <i class="align-middle" data-feather="cpu"></i> <span class="align-middle">Liquidación últimos 10 años</span>
                         </a>
                     </li>
                     <li class="sidebar-item {% if app.request.requestUri == path('proyeccion',{'uniqid': info.uniqid}) %}active{% endif %}">
@@ -52,7 +52,7 @@
                     </li>
                     <li class="sidebar-item {% if app.request.requestUri == path('resumen-completo',{'uniqid': info.uniqid}) %}active{% endif %}">
                         <a class="sidebar-link" href="{{ path('resumen-completo',{'uniqid': info.uniqid}) }}">
-                            <i class="align-middle" data-feather="package"></i> <span class="align-middle">Resumen completo</span>
+                            <i class="align-middle" data-feather="package"></i> <span class="align-middle">Liquidación toda la vida</span>
                         </a>
                     </li>
                     <li class="sidebar-item {% if app.request.requestUri == path('reporte-mensual',{'uniqid': info.uniqid}) %}active{% endif %}">

@@ -25,8 +25,17 @@
                                             data-bs-target="#totalsemanas">{{ info.totalWeeks }}</a></td>
                 </tr>
                 <tr>
-                    <th>Semanas Básicas</th>
-                    <td class="text-end">{{ ad['Semanas Básicas'] }}</td>
+                    <th>Género</th>
+                    <td class="text-end">{{ info.generoTexto }}</td>
+                </tr>
+                <tr>
+                    <th>Semanas Exigidas</th>
+                    <td class="text-end">
+                        {{ ad['Semanas Básicas'] }}
+                        {% if info.isMujer %}
+                        <br><small class="text-info"><i class="fas fa-balance-scale"></i> Sentencia C-197/2023</small>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr>
                     <th>Semanas Adicionales</th>

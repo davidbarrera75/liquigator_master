@@ -76,4 +76,74 @@ class IpcService
         ];
         return $months[$month];
     }
+
+    /**
+     * Calcula las semanas exigidas para pensión según género y año
+     * Según Sentencia C-197 de 2023, las mujeres tienen requisito diferenciado
+     *
+     * @param string $genero 'M' para masculino, 'F' para femenino
+     * @param int|null $anio Año para el cálculo (default: año actual)
+     * @return int Número de semanas exigidas
+     */
+    public function semanasExigidas(string $genero = 'M', ?int $anio = null): int
+    {
+        $anio = $anio ?? (int) date('Y');
+
+        // Para hombres siempre son 1,300 semanas
+        if ($genero === 'M') {
+            return $this->catalogo('SemanasBasicas');
+        }
+
+        // Sentencia C-197 de 2023 - Semanas exigidas para mujeres
+        $semanasMujeres = [
+            2025 => 1300,
+            2026 => 1250,
+            2027 => 1225,
+            2028 => 1200,
+            2029 => 1175,
+            2030 => 1150,
+            2031 => 1125,
+            2032 => 1100,
+            2033 => 1075,
+            2034 => 1050,
+            2035 => 1025,
+            2036 => 1000,
+        ];
+
+        // Si el año es anterior a 2025, aplicar el requisito general
+        if ($anio < 2025) {
+            return $this->catalogo('SemanasBasicas');
+        }
+
+        // Si el año es 2036 o posterior, el mínimo es 1000 semanas
+        if ($anio >= 2036) {
+            return 1000;
+        }
+
+        // Retornar las semanas correspondientes al año
+        return $semanasMujeres[$anio] ?? $this->catalogo('SemanasBasicas');
+    }
+
+    /**
+     * Obtiene información sobre el requisito de semanas según género
+     *
+     * @param string $genero 'M' para masculino, 'F' para femenino
+     * @param int|null $anio Año para el cálculo
+     * @return array Información detallada del requisito
+     */
+    public function infoSemanasExigidas(string $genero = 'M', ?int $anio = null): array
+    {
+        $anio = $anio ?? (int) date('Y');
+        $semanas = $this->semanasExigidas($genero, $anio);
+
+        return [
+            'semanas' => $semanas,
+            'genero' => $genero === 'F' ? 'Femenino' : 'Masculino',
+            'anio' => $anio,
+            'sentencia' => $genero === 'F' && $anio >= 2025 ? 'Sentencia C-197 de 2023' : null,
+            'nota' => $genero === 'F' && $anio >= 2025
+                ? "Según Sentencia C-197 de 2023, las mujeres requieren {$semanas} semanas en {$anio}"
+                : null
+        ];
+    }
 }

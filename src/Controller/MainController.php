@@ -181,6 +181,7 @@ class MainController extends AbstractController
                 $extract = $this->extract($uploaded, $fondo);
             }
             $birthDATE = Datetime::createFromFormat('Y-m-d', $request->get('birthdate'));
+            $genero = $request->get('genero', 'M'); // Default masculino
             $info = new Information();
             $info->setCreatedAt(new DateTime('now', $bog));
             $info->setIdentification($request->get('identification'));
@@ -188,6 +189,7 @@ class MainController extends AbstractController
             $info->setFullName($name);
             $info->setUser($this->getUser());
             $info->setBirthdate($birthDATE);
+            $info->setGenero($genero);
             $flag = 0;
             if ($request->get('options') == 'pdf') {
                 // PdfPlumberService devuelve data como array asociativo: ["YYYY-MM" => salario]
@@ -568,12 +570,14 @@ class MainController extends AbstractController
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
         $data_completo = $em->getRepository(Data::class)->getInfoListed($info->getId(), $info->getCotizacionAnio());
         $table = $this->infoLiquidacion($data_completo, $info->getCotizacionAnio());
-        $semanas = $this->ipcService->catalogo(self::SEMANAS);
+        // Sentencia C-197 de 2023: semanas según género
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
         $salario = $this->ipcService->salarioMinimo($this->year);
         $last = $em->getRepository(Data::class)->getLast($info);
         $after = DateTime::createFromFormat('Y-m', $last->getPeriod());
         $after->modify('+1 month');
         $ad['Semanas Básicas'] = $semanas;
+        $ad['Sentencia C-197'] = $info->isMujer() ? 'Sí' : 'No';
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;
         if ($info->getTotalWeeks() > $semanas) {
@@ -609,6 +613,26 @@ class MainController extends AbstractController
         $em = $this->getDoctrine()->getManager();
         $ipcEntity = $em->getRepository(Ipc::class)->findOneBy(['anio' => $year]);
         return $ipcEntity ? (float)$ipcEntity->getIpc() : 1.0;
+    }
+
+    /**
+     * Formatea una fecha YYYY-MM a formato legible (Ej: "Febrero 2026")
+     */
+    private function formatearMesAnio(string $fecha): string
+    {
+        $meses = [
+            '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo',
+            '04' => 'Abril', '05' => 'Mayo', '06' => 'Junio',
+            '07' => 'Julio', '08' => 'Agosto', '09' => 'Septiembre',
+            '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre'
+        ];
+        $partes = explode('-', $fecha);
+        if (count($partes) === 2) {
+            $anio = $partes[0];
+            $mes = $partes[1];
+            return ($meses[$mes] ?? $mes) . ' ' . $anio;
+        }
+        return $fecha;
     }
 
     private function infoLiquidacion(array $data, $year = null)
@@ -681,8 +705,6 @@ class MainController extends AbstractController
      */
     public function client(Request $request)
     {
-
-        $semanas = $this->ipcService->catalogo(self::SEMANAS);
         $em = $this->getDoctrine()->getManager();
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
 
@@ -695,6 +717,9 @@ class MainController extends AbstractController
         if (!$info->getUser()) {
             throw new \RuntimeException('Este informe no tiene usuario asignado (registro inconsistente). Por favor, vuelva a cargar el PDF.');
         }
+
+        // Sentencia C-197 de 2023: semanas según género
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
 
         $v = $this->verifyUser($info->getUser());
         if ($v) return $v;
@@ -712,6 +737,7 @@ class MainController extends AbstractController
         $after = DateTime::createFromFormat('Y-m', $last->getPeriod());
         $after->modify('+1 month');
         $ad['Semanas Básicas'] = $semanas;
+        $ad['Sentencia C-197'] = $info->isMujer() ? 'Aplica' : 'No aplica';
         $ad['Días Calculados'] = $info->getTotalDays();
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;
@@ -803,7 +829,29 @@ class MainController extends AbstractController
         $em->persist($info);
         $em->flush();
         return $this->redirectToRoute('client', ['uniqid' => $info->getUniqId()]);
+    }
 
+    /**
+     * @Route("/client/{uniqid}/genero", name="client_genero_update", methods={"POST"})
+     */
+    public function generoUpdate(Request $request)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
+        $genero = $request->get('genero');
+
+        if (in_array($genero, ['M', 'F'])) {
+            $info->setGenero($genero);
+            $em->persist($info);
+            $em->flush();
+
+            $semanasExigidas = $this->ipcService->semanasExigidas($genero, (int)$this->year);
+            $this->addFlash('success', 'Género actualizado. Semanas exigidas: ' . $semanasExigidas);
+        } else {
+            $this->addFlash('error', 'Género no válido');
+        }
+
+        return $this->redirectToRoute('client', ['uniqid' => $info->getUniqId()]);
     }
 
     /**
@@ -1017,16 +1065,53 @@ class MainController extends AbstractController
         $req = $request->request->all();
         $ipc = $em->getRepository(Ipc::class)->max();
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $req['client']]);
-        $semanas = $this->ipcService->catalogo(self::SEMANAS);
+        // Sentencia C-197 de 2023: semanas según género
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
         $data = [];
         $salario = $this->ipcService->salarioMinimo($this->year);
         $arr = [];
         $total_meses_proyeccion = 0;
 
+        // Variables para guardar las fechas de la proyección
+        $fechaInicialProyeccion = null;
+        $fechaFinalProyeccion = null;
+
         foreach ($req['pos'] as $pos) {
-            $total_meses_proyeccion += $pos['meses'];
+            // Calcular meses desde las fechas si están disponibles
+            $meses = isset($pos['meses']) ? (int)$pos['meses'] : 0;
+
+            if (isset($pos['fechaDesde']) && isset($pos['fechaHasta']) && !empty($pos['fechaDesde']) && !empty($pos['fechaHasta'])) {
+                $fechaDesde = new DateTime($pos['fechaDesde'] . '-01');
+                $fechaHasta = new DateTime($pos['fechaHasta'] . '-01');
+
+                // Calcular meses entre las fechas (Feb 2026 a Feb 2027 = 12 meses)
+                $interval = $fechaDesde->diff($fechaHasta);
+                $meses = ($interval->y * 12) + $interval->m;
+                // Si es el mismo mes, al menos 1 mes
+                if ($meses === 0) {
+                    $meses = 1;
+                }
+
+                // Guardar primera fecha inicial y última fecha final
+                if ($fechaInicialProyeccion === null || $fechaDesde < $fechaInicialProyeccion) {
+                    $fechaInicialProyeccion = $fechaDesde;
+                }
+                if ($fechaFinalProyeccion === null || $fechaHasta > $fechaFinalProyeccion) {
+                    $fechaFinalProyeccion = $fechaHasta;
+                }
+            }
+
+            $total_meses_proyeccion += $meses;
             $salariopos = filter_var($pos['salario'], FILTER_SANITIZE_NUMBER_INT);
-            $arr[] = ['val' => $salariopos, 'period' => $ipc->getAnio(), 'conteo' => $pos['meses']];
+            $arr[] = [
+                'val' => $salariopos,
+                'salario' => number_format($salariopos, 0, ',', '.'),
+                'period' => $ipc->getAnio(),
+                'conteo' => $meses,
+                'meses' => $meses,
+                'fechaDesde' => isset($pos['fechaDesde']) ? $this->formatearMesAnio($pos['fechaDesde']) : null,
+                'fechaHasta' => isset($pos['fechaHasta']) ? $this->formatearMesAnio($pos['fechaHasta']) : null
+            ];
         }
         $semanas_ = (360 / 7) / 12;
         $semanas_dif = $total_meses_proyeccion * $semanas_;
@@ -1046,8 +1131,10 @@ class MainController extends AbstractController
             $porcentaje_adicional = ((int)($adicional / $this->ipcService->catalogo(self::ADICIONAL))) * $this->ipcService->catalogo(self::INCREMENTO_TAZA);
         }
         $data = [];
-        $data['proyeccion'] = $req['pos'];
+        $data['proyeccion'] = $arr;
         $data['meses'] = $total_meses_proyeccion;
+        $data['fechaInicial'] = $fechaInicialProyeccion ? $fechaInicialProyeccion->format('Y-m') : null;
+        $data['fechaFinal'] = $fechaFinalProyeccion ? $fechaFinalProyeccion->format('Y-m') : null;
         $data['data'] = $table;
         $data['semanas'] = $semanas_adicionales;
         $data['smmlv'] = $salario;
@@ -1064,13 +1151,13 @@ class MainController extends AbstractController
         $proyeccion->setInformation($info)
             ->setSalario($salariopos)
             ->setTitulo($req['titulo'])
-            ->setFechaInicial(new DateTime())
-            ->setFechaFinal(new DateTime())
+            ->setFechaInicial($fechaInicialProyeccion ?? new DateTime())
+            ->setFechaFinal($fechaFinalProyeccion ?? new DateTime())
             ->setJsonData($data);
         $em->persist($proyeccion);
         $em->flush();
         $this->addFlash('success', 'Proyección Creada');
-        return $this->redirectToRoute('client', ['uniqid' => $info->getUniqId()]);
+        return $this->redirectToRoute('proyeccion', ['uniqid' => $info->getUniqId()]);
     }
 
     /**
@@ -1455,10 +1542,12 @@ class MainController extends AbstractController
             }
         }
 
-        // Obtener datos de liquidación
-        $semanas = $this->ipcService->catalogo(self::SEMANAS);
+        // Obtener datos de liquidación - Sentencia C-197 de 2023
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
         $ad = [];
         $ad['Semanas Básicas'] = $semanas;
+        $ad['Género'] = $info->getGeneroTexto();
+        $ad['Sentencia C-197'] = $info->isMujer() ? 'Aplica' : 'No aplica';
         $ad['Días Calculados'] = $info->getTotalDays();
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;

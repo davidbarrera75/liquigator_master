@@ -18,11 +18,22 @@
                                     <div class="card-body bg-light">
                                         <div class="row">
                                             <table class="table table-sm">
+                                                {% if p.jsonData.fechaInicial|default(false) and p.jsonData.fechaFinal|default(false) %}
+                                                <tr>
+                                                    <th>Período</th>
+                                                    <td class="text-right">{{ p.jsonData.fechaInicial }} al {{ p.jsonData.fechaFinal }}</td>
+                                                </tr>
+                                                {% endif %}
                                                 {% for pr in p.jsonData.proyeccion %}
                                                     <tr>
-
-                                                        <td><b>Salario</b><br>
-                                                            $&nbsp;{{ pr['salario'] }}
+                                                        <td>
+                                                            {% if pr['fechaDesde']|default(false) and pr['fechaHasta']|default(false) %}
+                                                            <small class="text-muted d-block">{{ pr['fechaDesde'] }} - {{ pr['fechaHasta'] }}</small>
+                                                            {% endif %}
+                                                            <b>Salario:</b> $&nbsp;{{ pr['salario']|default(pr['val']|number_format(0, ',', '.')) }}
+                                                            {% if pr['meses']|default(false) %}
+                                                            <span class="badge bg-secondary ms-2">{{ pr['meses'] }} meses</span>
+                                                            {% endif %}
                                                         </td>
                                                     </tr>
                                                 {% endfor %}
@@ -85,57 +96,70 @@
                                         {% embed "partials/modal.html.twig" with {'id':'detalles'~p.id,'title':'Detalle'} %}
                                             {% block modal_content %}
                                                 {% include 'main/template_data_reporte.html.twig' with {'data':p.jsonData.data} %}
-                                                <table class="table table-sm">
+                                                <h6 class="mt-3 mb-2">Períodos de Proyección</h6>
+                                                <table class="table table-sm table-bordered">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Período</th>
+                                                            <th>Meses</th>
+                                                            <th class="text-end">Salario</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
                                                     {% for pr in p.jsonData.proyeccion %}
                                                         <tr>
-
-                                                            <td><b>Salario</b><br>
-                                                                $&nbsp;{{ pr['salario'] }}
+                                                            <td>
+                                                                {% if pr['fechaDesde']|default(false) and pr['fechaHasta']|default(false) %}
+                                                                {{ pr['fechaDesde'] }} - {{ pr['fechaHasta'] }}
+                                                                {% else %}
+                                                                -
+                                                                {% endif %}
                                                             </td>
+                                                            <td class="text-center">{{ pr['meses']|default(pr['conteo']|default('-')) }}</td>
+                                                            <td class="text-end">${{ pr['salario']|default(pr['val']|number_format(0, ',', '.')) }}</td>
                                                         </tr>
                                                     {% endfor %}
-                                                    <tr>
-                                                        <th>Meses</th>
-                                                        <td class="text-right">{{ p.jsonData.meses }}</td>
-                                                    </tr>
+                                                    </tbody>
+                                                    <tfoot class="table-secondary">
+                                                        <tr>
+                                                            <th>Total</th>
+                                                            <th class="text-center">{{ p.jsonData.meses }}</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                                <h6 class="mt-3 mb-2">Cálculo de Pensión</h6>
+                                                <table class="table table-sm">
                                                     <tr>
                                                         <th>Total Semanas</th>
-                                                        <td class="text-right">{{ p.jsonData.semanas|number_format(2) }}</td>
+                                                        <td class="text-end">{{ p.jsonData.semanas|number_format(2) }}</td>
                                                     </tr>
                                                     <tr>
                                                         <th>IBL</th>
-                                                        <td class="text-right">
+                                                        <td class="text-end">
                                                             $&nbsp;{{ p.jsonData.ibl|number_format(2) }}</td>
                                                     </tr>
                                                     <tr>
                                                         <th>s</th>
-                                                        <td class="text-right">{{ p.jsonData.s|number_format(2) }}</td>
+                                                        <td class="text-end">{{ p.jsonData.s|number_format(2) }}</td>
                                                     </tr>
                                                     <tr>
                                                         <th>r</th>
-                                                        <td class="text-right">{{ (p.jsonData.r*100)|number_format(2) }}
-                                                            %
-                                                        </td>
+                                                        <td class="text-end">{{ (p.jsonData.r*100)|number_format(2) }}%</td>
                                                     </tr>
                                                     <tr>
                                                         <th>Total Porcentaje</th>
-                                                        <td class="text-right">{{ (p.jsonData.x*100)|number_format(2) }}
-                                                            %
-                                                        </td>
+                                                        <td class="text-end">{{ (p.jsonData.x*100)|number_format(2) }}%</td>
                                                     </tr>
-                                                    <tr>
+                                                    <tr class="table-success">
                                                         <th>Pensión Básica</th>
-                                                        <td class="text-right">
+                                                        <td class="text-end fw-bold">
                                                             $&nbsp;{{ p.jsonData.r1|number_format(2) }}</td>
                                                     </tr>
-                                                    <tr>
-                                                        <th>Pensión Total <small>(Tomando el total de
-                                                                semanas)</small>
-                                                        </th>
-                                                        <td class="text-right">
-                                                            $&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
+                                                    <tr class="table-primary">
+                                                        <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
+                                                        <td class="text-end fw-bold">$&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
                                                     </tr>
-
                                                 </table>
                                             {% endblock %}
                                         {% endembed %}
@@ -187,9 +211,7 @@
             <form action="{{ path('proyection_name') }}" method="post" class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">AGREGAR ESCENARIO</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <table class="table" id="row-range">
@@ -198,8 +220,9 @@
                         </tbody>
                         <tfoot>
                         <tr>
-                            <td colspan="3">
-                                <button class="btn btn-dark" type="button" value=1 id="agregar-fecha">Agregar Fecha
+                            <td colspan="4">
+                                <button class="btn btn-dark" type="button" value="1" id="agregar-periodo">
+                                    <i class="fas fa-plus"></i> Agregar Otro Período
                                 </button>
                             </td>
                         </tr>
@@ -215,7 +238,7 @@
                 <div class="modal-footer">
                     <input type="hidden" name="client" value="{{ info.uniqId }}">
 
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Generar</button>
                 </div>
             </form>
@@ -223,8 +246,7 @@
     </div>
 {% endblock %}
 {% block javascripts %}
-    <script src="{{ asset('vendor/jquery.maskMoney.js') }}"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-maskmoney/3.0.2/jquery.maskMoney.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
@@ -298,29 +320,84 @@
             $('#tabs a[href="' + hash + '"]').tab('show');
 
             $(".salario").maskMoney({thousands: ',', decimal: '.', allowZero: true, precision: 0});
-            dates($('.daterange'));
 
-            $('#agregar-fecha').click(function () {
+            // Fecha mínima para proyecciones (mes actual)
+            var hoy = new Date();
+            var mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+
+            // Función para calcular meses entre dos fechas
+            function calcularMeses($row) {
+                var fechaDesde = $row.find('.fecha-desde').val();
+                var fechaHasta = $row.find('.fecha-hasta').val();
+
+                console.log('Calculando meses:', fechaDesde, 'a', fechaHasta);
+
+                if (fechaDesde && fechaHasta) {
+                    // Parsear las fechas (formato YYYY-MM)
+                    var partesDesde = fechaDesde.split('-');
+                    var partesHasta = fechaHasta.split('-');
+
+                    var añoDesde = parseInt(partesDesde[0]);
+                    var mesDesde = parseInt(partesDesde[1]);
+                    var añoHasta = parseInt(partesHasta[0]);
+                    var mesHasta = parseInt(partesHasta[1]);
+
+                    // Calcular meses: Feb 2026 a Feb 2027 = 12 meses
+                    var meses = (añoHasta - añoDesde) * 12 + (mesHasta - mesDesde);
+
+                    console.log('Meses calculados:', meses);
+
+                    if (meses > 0) {
+                        $row.find('.meses-calculados').val(meses);
+                    } else if (meses === 0) {
+                        // Mismo mes = 1 mes
+                        $row.find('.meses-calculados').val(1);
+                    } else {
+                        $row.find('.meses-calculados').val('');
+                    }
+                }
+            }
+
+            // Calcular meses al cambiar fechas - usando delegación de eventos en el documento
+            $(document).on('change', '.fecha-desde, .fecha-hasta', function() {
+                var $row = $(this).closest('tr');
+                console.log('Evento change detectado en:', this);
+                calcularMeses($row);
+            });
+
+            // Botón para agregar otro período
+            $('#agregar-periodo').click(function () {
                 var pos = parseInt($(this).val()) + 1;
+                console.log('Agregando período:', pos);
                 $.post('{{ path('proyection_add') }}', {pos: pos}, function (data) {
                     var $append = $(data).appendTo("#list-proyection");
-                    $append.find('.salario').maskMoney(
-                        {
-                            thousands: ',',
-                            decimal: '.',
-                            allowZero: true,
-                            precision: 0
-                        }
-                    );
-                    dates($append.find('.daterange'));
+                    $append.find('.salario').maskMoney({
+                        thousands: ',',
+                        decimal: '.',
+                        allowZero: true,
+                        precision: 0
+                    });
+                    // Establecer fecha mínima para nuevos campos
+                    $append.find('.fecha-desde, .fecha-hasta').attr('min', mesActual);
+                    console.log('Período agregado correctamente');
+                }).fail(function(xhr, status, error) {
+                    console.error('Error al agregar período:', error);
                 });
                 $(this).val(pos);
             });
-            $('body').on('click', '.delete-row', function (e) {
+
+            // Eliminar período
+            $(document).on('click', '.delete-row', function (e) {
                 e.preventDefault();
                 var $id = $(this).data('id');
-                $('#row-range').find('#' + $id).empty();
+                $('#' + $id).fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
 
+            // Cuando se abre el modal, establecer fechas mínimas
+            $('#modelId').on('shown.bs.modal', function () {
+                $('.fecha-desde, .fecha-hasta').attr('min', mesActual);
             });
 
         });

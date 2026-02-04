@@ -21,14 +21,14 @@
         {% for data in data.content %}
             <tr>
                 <td>{{ data.period }}</td>
-                <td class="text-end {% if data.topeAplicado %}valor-topeado{% endif %}"
-                    {% if data.topeAplicado %}
+                <td class="text-end {% if data.topeAplicado|default(false) %}valor-topeado{% endif %}"
+                    {% if data.topeAplicado|default(false) %}
                     data-bs-toggle="tooltip"
                     data-bs-placement="top"
-                    title="⚠️ Limitado por tope de IBC | Valor original: ${{ data.ibcOriginal|number_format(0,'.',',') }}"
+                    title="⚠️ Limitado por tope de IBC | Valor original: ${{ data.ibcOriginal|default(0)|number_format(0,'.',',') }}"
                     {% endif %}>
                     {{ data.val|number_format(0,'.',',') }}
-                    {% if data.topeAplicado %}<i class="fas fa-exclamation-triangle text-warning ms-1" style="font-size: 0.8em;"></i>{% endif %}
+                    {% if data.topeAplicado|default(false) %}<i class="fas fa-exclamation-triangle text-warning ms-1" style="font-size: 0.8em;"></i>{% endif %}
                 </td>
                 <td class="text-end">{{ data.conteo }}</td>
                 <td class="text-end">{{ data.ipc|number_format(6) }}</td>
@@ -50,7 +50,7 @@
     </table>
 </div>
 
-<!-- Sección de Gráfica de Evolución del IBL -->
+<!-- Sección de Gráfica de Evolución del IBC -->
 <div class="card mt-4" id="ibl-evolution-section">
     <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;">
         <h5 class="mb-0">
@@ -72,8 +72,8 @@
         </div>
 
         <p class="text-muted small">
-            <strong>¿Qué es el IBL?</strong> El Ingreso Base de Liquidación es el promedio de los salarios actualizados de los últimos 10 años.
-            Esta gráfica muestra cómo ha evolucionado el IBL año tras año, permitiendo identificar tendencias de crecimiento o estancamiento salarial.
+            <strong>¿Qué es el IBC?</strong> El Ingreso Base de Cotización es el salario sobre el cual se realizan los aportes al sistema de pensiones.
+            Esta gráfica muestra cómo ha evolucionado el IBC año tras año, permitiendo identificar tendencias de crecimiento o estancamiento salarial.
         </p>
 
         <!-- Estadísticas del IBL -->
@@ -81,7 +81,7 @@
             <div class="col-md-3">
                 <div class="card border-info">
                     <div class="card-body text-center p-2">
-                        <small class="text-muted d-block">IBL Inicial</small>
+                        <small class="text-muted d-block">IBC Inicial</small>
                         <h6 class="mb-0" id="ibl-inicial">Calculando...</h6>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
             <div class="col-md-3">
                 <div class="card border-success">
                     <div class="card-body text-center p-2">
-                        <small class="text-muted d-block">IBL Actual</small>
+                        <small class="text-muted d-block">IBC Actual</small>
                         <h6 class="mb-0" id="ibl-actual">Calculando...</h6>
                     </div>
                 </div>
@@ -125,8 +125,8 @@
         <div class="mt-3">
             <small class="text-muted">
                 <strong>Interpretación:</strong> 
-                <span class="text-success">▲ IBL ascendente</span> indica mejora en el historial salarial. 
-                <span class="text-danger">▼ IBL descendente</span> indica períodos recientes con salarios más bajos.
+                <span class="text-success">▲ IBC ascendente</span> indica mejora en el historial salarial.
+                <span class="text-danger">▼ IBC descendente</span> indica períodos recientes con salarios más bajos.
             </small>
         </div>
     </div>
@@ -193,7 +193,7 @@
         return data;
     }
     
-    // ===== ANÁLISIS AUTOMÁTICO DEL IBL =====
+    // ===== ANÁLISIS AUTOMÁTICO DEL IBC =====
     function generateIBLAnalysis(iblData) {
         if (iblData.length < 2) return;
         
@@ -210,9 +210,9 @@
             // POSITIVO: Crecimiento fuerte
             alertClass = 'alert-success';
             icon = '🟢';
-            title = 'ANÁLISIS DEL IBL - TENDENCIA POSITIVA';
+            title = 'ANÁLISIS DEL IBC - TENDENCIA POSITIVA';
             interpretation = 'Excelente noticia: Su historial salarial muestra un <strong>crecimiento sostenido</strong>. ' +
-                'Los salarios recientes son significativamente mejores que los antiguos, lo que resulta en un IBL en constante mejora. ' +
+                'Los salarios recientes son significativamente mejores que los antiguos, lo que resulta en un IBC en constante mejora. ' +
                 'Este crecimiento del <strong>' + crecimientoAnual.toFixed(2) + '% anual</strong> es muy favorable.';
             recommendation = '<strong>Recomendación:</strong> Mantener el rumbo actual. El historial salarial es sólido ' +
                 'y la tendencia es muy positiva para su pensión futura.';
@@ -220,12 +220,12 @@
             // NEUTRO: Crecimiento moderado o estable
             alertClass = 'alert-warning';
             icon = '🟡';
-            title = 'ANÁLISIS DEL IBL - TENDENCIA ESTABLE';
+            title = 'ANÁLISIS DEL IBC - TENDENCIA ESTABLE';
             interpretation = 'Su historial salarial muestra <strong>estabilidad</strong> con un crecimiento moderado del ' +
                 '<strong>' + crecimientoAnual.toFixed(2) + '% anual</strong>. ';
-            
+
             if (crecimientoAnual > 0) {
-                interpretation += 'El IBL está creciendo lentamente, lo cual es positivo pero podría mejorarse.';
+                interpretation += 'El IBC está creciendo lentamente, lo cual es positivo pero podría mejorarse.';
             } else if (crecimientoAnual < 0 && crecimientoAnual > -2) {
                 interpretation += 'Hay una leve tendencia a la baja que debe monitorearse.';
             } else {
@@ -233,14 +233,14 @@
             }
             
             recommendation = '<strong>Recomendación:</strong> El historial es estable pero con margen de mejora. ' +
-                'Considere estrategias para incrementar el IBL en los próximos períodos si desea optimizar su pensión futura.';
+                'Considere estrategias para incrementar el IBC en los próximos períodos si desea optimizar su pensión futura.';
         } else {
             // NEGATIVO: Decrecimiento
             alertClass = 'alert-danger';
             icon = '🔴';
-            title = 'ANÁLISIS DEL IBL - ALERTA DETECTADA';
+            title = 'ANÁLISIS DEL IBC - ALERTA DETECTADA';
             var perdida = iblInicial - iblActual;
-            interpretation = '<strong>⚠️ Situación que requiere atención:</strong> El IBL ha disminuido en ' +
+            interpretation = '<strong>⚠️ Situación que requiere atención:</strong> El IBC ha disminuido en ' +
                 '<strong>$' + formatNumber(Math.abs(perdida)) + '</strong> (un ' + Math.abs(crecimientoAnual).toFixed(2) + '% anual). ' +
                 'Esto significa que los salarios recientes son más bajos que los históricos ajustados por inflación, ' +
                 'lo cual tendrá un <strong>impacto negativo en su pensión</strong>.';
@@ -250,8 +250,8 @@
         }
         
         var html = '<ul class="mb-2">';
-        html += '<li>' + icon + ' <strong>IBL Inicial (hace ' + years + ' años):</strong> $' + formatNumber(iblInicial) + '</li>';
-        html += '<li>' + icon + ' <strong>IBL Actual:</strong> $' + formatNumber(iblActual) + '</li>';
+        html += '<li>' + icon + ' <strong>IBC Inicial (hace ' + years + ' años):</strong> $' + formatNumber(iblInicial) + '</li>';
+        html += '<li>' + icon + ' <strong>IBC Actual:</strong> $' + formatNumber(iblActual) + '</li>';
         html += '<li>' + icon + ' <strong>Variación Total:</strong> ' + (crecimientoTotal >= 0 ? '▲' : '▼') + ' ' + Math.abs(crecimientoTotal).toFixed(2) + '%</li>';
         html += '<li>' + icon + ' <strong>Velocidad de Cambio:</strong> ' + (crecimientoAnual >= 0 ? '▲' : '▼') + ' ' + Math.abs(crecimientoAnual).toFixed(2) + '% anual</li>';
         html += '</ul>';
@@ -306,7 +306,7 @@
     function renderIBLChart(iblData) {
         var ctx = document.getElementById('ibl-evolution-chart');
         if (!ctx) {
-            console.error('Canvas element for IBL not found');
+            console.error('Canvas element for IBC not found');
             return;
         }
         
@@ -356,7 +356,7 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                var label = 'IBL: $' + formatNumber(context.parsed.y);
+                                var label = 'IBC: $' + formatNumber(context.parsed.y);
                                 
                                 // Calcular variación vs año anterior
                                 if (context.dataIndex > 0) {

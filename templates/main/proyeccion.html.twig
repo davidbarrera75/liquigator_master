@@ -1,18 +1,45 @@
 <tr id="row-{{ pos }}">
-    <td><div class="form-group">
-            <label for="daterange">Meses</label>
-            <input type="number" min="1" name="pos[{{ pos }}][meses]" class="form-control" required />
-        </div></td>
-    <td><div class="form-group">
-            <label for="salario">Salario</label>
-            <input type="text"  name="pos[{{ pos }}][salario]" class="form-control salario">
-        </div></td>
-    <td>
-        {% if pos !=1 %}
-            <button class="btn btn-primary btn-sm delete-row" type="button" data-id="row-{{ pos }}">Quitar elemento</button>
-        {% endif %}
-    </td>
-    <td>
-        <div id="calculate-{{ pos }}"></div>
+    <td colspan="4">
+        <div class="card mb-2 {% if pos == 1 %}border-primary{% else %}border-secondary{% endif %}">
+            <div class="card-header py-2 {% if pos == 1 %}bg-primary text-white{% else %}bg-light{% endif %} d-flex justify-content-between align-items-center">
+                <span><strong>Período {{ pos }}</strong></span>
+                {% if pos != 1 %}
+                    <button class="btn btn-danger btn-sm delete-row" type="button" data-id="row-{{ pos }}">
+                        <i class="fas fa-trash"></i> Quitar
+                    </button>
+                {% endif %}
+            </div>
+            <div class="card-body py-2">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Desde</label>
+                            <input type="month" name="pos[{{ pos }}][fechaDesde]" class="form-control fecha-desde" required />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Hasta</label>
+                            <input type="month" name="pos[{{ pos }}][fechaHasta]" class="form-control fecha-hasta" required />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Meses</label>
+                            <input type="number" min="1" name="pos[{{ pos }}][meses]" class="form-control meses-calculados text-center bg-light" readonly />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Salario Mensual</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" name="pos[{{ pos }}][salario]" class="form-control salario" required placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </td>
 </tr>

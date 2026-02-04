@@ -2,11 +2,21 @@
 <h2 class="h2 mb-3 text-center"><b>LIQUIDACIÓN PENSIÓN RÉGIMEN DE PRIMA MEDIA</b></h2>
 <h3 class="h3 mb-3 text-center text-uppercase"><b>{{ info.fullName }}</b></h3>
 <div class="row">
-    <dl class="col-lg-4">
+    <dl class="col-lg-3">
         <dt>Fecha de Nacimiento</dt>
         <dd>{{ info.birthdate|date('d M Y') }} <small>{{ info.edad }} años</small></dd>
     </dl>
-    <dl class="col-lg-4">
+    <dl class="col-lg-2">
+        <dt>Género
+            <a href="#" data-bs-toggle="modal" data-bs-target="#modalGenero" class="text-primary" title="Editar género">
+                <i class="align-middle" data-feather="edit-2" style="width:14px;height:14px;"></i>
+            </a>
+        </dt>
+        <dd>{{ info.generoTexto }}
+            {% if info.isMujer %}<span class="badge bg-info">C-197/2023</span>{% endif %}
+        </dd>
+    </dl>
+    <dl class="col-lg-3">
         <dt>Fondo de Pensiones</dt>
         <dd class="text-uppercase">{{ info.fondo }}</dd>
     </dl>
@@ -14,5 +24,66 @@
         <dt>Fecha de Informe</dt>
         <dd class="text-uppercase">{{ info.createdAt|date('d/m/Y g:i a') }}</dd>
     </dl>
+</div>
 
+<!-- Modal para editar género -->
+<div class="modal fade" id="modalGenero" tabindex="-1" aria-labelledby="modalGeneroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form action="{{ path('client_genero_update', {'uniqid': info.uniqId}) }}" method="post">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalGeneroLabel">
+                        Cambiar Género
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <small>
+                            <strong>Sentencia C-197 de 2023:</strong> Las mujeres tienen un requisito diferenciado de semanas cotizadas para acceder a la pensión.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="genero" class="form-label fw-bold">Seleccione el género:</label>
+                        <select name="genero" id="genero" class="form-select form-select-lg">
+                            <option value="M" {% if info.genero == 'M' %}selected{% endif %}>
+                                Masculino (1,300 semanas)
+                            </option>
+                            <option value="F" {% if info.genero == 'F' %}selected{% endif %}>
+                                Femenino ({{ semanas_mujeres|default('según año') }})
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mt-3" id="infoSemanas">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Año</th>
+                                    <th>Semanas Mujeres</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>2025</td><td>1,300</td></tr>
+                                <tr><td>2026</td><td>1,250</td></tr>
+                                <tr><td>2027</td><td>1,225</td></tr>
+                                <tr><td>2028</td><td>1,200</td></tr>
+                                <tr><td>2029</td><td>1,175</td></tr>
+                                <tr><td>2030</td><td>1,150</td></tr>
+                                <tr><td>2031</td><td>1,125</td></tr>
+                                <tr><td>2032</td><td>1,100</td></tr>
+                                <tr><td>2033</td><td>1,075</td></tr>
+                                <tr><td>2034</td><td>1,050</td></tr>
+                                <tr><td>2035</td><td>1,025</td></tr>
+                                <tr><td>2036+</td><td>1,000</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
