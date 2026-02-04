@@ -1,0 +1,97 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Resumen Mensual{% endblock %}
+{% block id %}resume-mensual{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-6 col-sm-12">
+                    <h3>Años <sup class="text-secondary"><small>(Seleccionar año para ver detalles)</small></sup></h3>
+                    <nav class="nav nav-pills flex-column" style="height: 40vh; overflow: scroll">
+                        {% for y in years %}
+                            <li class="nav-item">
+                                <a href="#" class="nav-link th-year" type="button"
+                                   data-target=".tr-{{ y }}"><small>{{ y }}</small></a>
+                            </li>
+
+                        {% endfor %}
+                    </nav>
+                </div>
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="table">
+                                <tbody>
+                                <tr class="bg-body">
+                                    <th>Total Semanas Actual</th>
+                                    <td class="text-end">{{ info.totalWeeks|number_format(2,',','.') }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Total Dias Calculadas</th>
+                                    <td class="text-end">{{ dias|number_format(0,',','.') }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Total Semanas calculados por días</th>
+                                    <td class="text-end">{{ (dias/7)|number_format(2,',','.') }}</td>
+                                </tr>
+                                </tbody>
+                                <tfoot>
+                                <td colspan="2">
+                                    <div class="row">
+                                        <a onclick="window.location.reload()" class="col btn btn-sm btn-info">Recalcular
+                                            semanas</a>
+                                        <form class="col" method="post"
+                                              action="{{ path('client_weeks_update',{'uniqid':info.uniqId}) }}">
+                                            <input type="hidden" name="value" value="{{ (dias/7)|round(2) }}">
+                                            <input type="hidden" name="token" value="{{ csrf_token('update_weeks') }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Aplicar semanas
+                                                calculadas
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                </td>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 table-responsive">
+                    <table class="table table-bordered table-hover small">
+
+                        <thead class="bg-dark text-white">
+                        <tr>
+                            <th>Año</th>
+                            <th>Mes</th>
+                            <th style="max-width: 50px">Dias cotizados</th>
+                            <th>Valor</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for data in mensual %}
+                            <tr class="tr tr-{{ data.periodArray.year }}" style="display: none">
+                                <th>{{ data.periodArray.year }}</th>
+                                <th>{{ data.periodArray.month }}</th>
+                                <th><a href="#" class="dias-reporte-mensual" data-pk="{{ data.id }}"
+                                       data-url="{{ path('client_actualizar_dias') }}" data-title="Dias"
+                                       data-value="{{ data.periodArray.day }}">{{ data.periodArray.day }}</a></th>
+                                <td class="text-end">
+                                    <a href="#" class="valor-reporte-mensual" data-pk="{{ data.id }}"
+                                       data-url="{{ path('client_actualizar_salario') }}" data-title="Valor"
+                                       data-value="{{ data.val }}">{{ data.val }}</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- Button trigger modal -->
+    <!-- Modal -->
+{% endblock %}

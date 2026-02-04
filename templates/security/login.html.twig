@@ -1,0 +1,63 @@
+{% extends 'base.html.twig' %}
+{% block title %}Bienvenidos{% endblock %}
+{% block id %}login{% endblock %}
+{% block main %}
+    <main class="d-flex w-100">
+        <div class="container d-flex flex-column">
+            <div class="row vh-100">
+                <div class="col-sm-10 col-md-8 col-lg-6 mx-auto d-table h-100">
+                    <div class="d-table-cell align-middle">
+
+                        <div class="text-center mt-4">
+                            <h1 class="h2">Bienvenidos</h1>
+                            <p class="lead">
+                                Iniciar sesión para continuar
+                            </p>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="m-sm-4">
+                                    <div class="text-center">
+                                        <img src="{{ asset('img/LIQUIGATOR -04-01.png') }}" alt="Liquigator"
+                                             class="img-fluid"/>
+                                    </div>
+                                    {% if error %}
+                                        <div class="text-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                                    {% endif %}
+                                    {% if app.user %}
+                                        <div class="text-info">
+                                           Has ingreado como {{ app.user.username }}, <a
+                                                    href="{{ path('app_logout') }}">Salir</a> o <a
+                                                    href="{{ path('main') }}">Entrar</a>
+                                        </div>
+                                    {% endif %}
+                                    <form method="post">
+                                        <div class="mb-3">
+                                            <label class="form-label">Correo</label>
+                                            <input class="form-control form-control-lg" value="{{ last_username }}"
+                                                   type="email" name="email"
+                                                   placeholder="Ingresar Correo" autofocus/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Contraseña</label>
+                                            <input class="form-control form-control-lg" type="password" name="password"
+                                                   placeholder="Ingresar Contraseña"/>
+                                        </div>
+                                        <input type="hidden" name="_csrf_token"
+                                               value="{{ csrf_token('authenticate') }}">
+                                        <div class="text-center mt-3">
+                                            <button type="submit" href="index.html" class="btn btn-lg btn-success">Ingresar</button>
+                                            <!-- <button type="submit" class="btn btn-lg btn-primary">Sign in</button> -->
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

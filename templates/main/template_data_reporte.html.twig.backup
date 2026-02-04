@@ -1,0 +1,37 @@
+<div class="table-responsive pt-2">
+    <table class="table table-bordered table-striped small table-sm" width="100%" border="1"
+           cellspacing="0" cellpadding="5" id="table-reporte">
+        <thead>
+        <tr>
+            <th><b>Año</b></th>
+            <th><b>Salario</b></th>
+            <th><b>Meses</b></th>
+            <th><b>IPC</b></th>
+            <th><b>Actualizado</b></th>
+            <th><b>Actualizado por meses</b></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for data in data.content %}
+            <tr>
+                <td>{{ data.period }}</td>
+                <td class="text-end">{{ data.val|number_format(0,'.',',') }}</td>
+                <td class="text-end">{{ data.conteo }}</td>
+                <td class="text-end">{{ data.ipc|number_format(7) }}</td>
+                <td class="text-end">{{ data.actualizado|number_format(2) }}</td>
+                <td class="text-end">{{ data.porMeses|number_format(2) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr>
+            <th></th>
+            <th></th>
+            <th class="text-end"><b>{{ data.resume.meses }}</b></th>
+            <th></th>
+            <th></th>
+            <th class="text-end"><b>{{ data.resume.total|number_format(2) }}</b></th>
+        </tr>
+        </tfoot>
+    </table>
+</div>

@@ -1,0 +1,666 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Resumen{% endblock %}
+{% block id %}client{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+    <div class="card col-12">
+        <div class="card-body">
+            {% include 'main/template_data_reporte.html.twig' with {'data':data} %}
+            <div class="row">
+                <!-- Modal -->
+
+                <div class="col-sm-12 col-md-6 col-lg-4">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Liquidación al año</th>
+                            <td class="text-end">
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#liquidacionalanio">
+                                    {{ info.cotizacionAnio }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Total Semanas</th>
+                            <td class="text-end"><a href="#" data-bs-toggle="modal"
+                                                    data-bs-target="#totalsemanas">{{ info.totalWeeks }}</a></td>
+                        </tr>
+                        <tr>
+                            <th>Semanas Básicas</th>
+                            <td class="text-end">{{ ad['Semanas Básicas'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Días Calculados</th>
+                            <td class="text-end">{{ ad['Días Calculados'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Semanas Adicionales</th>
+                            <td class="text-end">{{ ad['Semanas Adicionales'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Porcentaje Adicional</th>
+                            <td class="text-end">{{ ad['Porcentaje Adicional'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>IBL</th>
+                            <td class="text-end">{{ ad['IBL']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <th>s</th>
+                            <td class="text-end">{{ ad['S'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>r</th>
+                            <td class="text-end">{{ ad['R'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Porcentaje</th>
+                            <td class="text-end">{{ ad['X'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pensión Básica</th>
+                            <td class="text-end">{{ ad['R1']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
+                            <td class="text-end">{{ ad['R2']|raw }}</td>
+                        </tr>
+
+                    </table>
+                </div>
+                <div class="col-sm-12 col-md-6 col-lg-8">
+                    <form class="card border-primary" action="{{ path('report_pdf',{'id':info.id}) }}"
+                          method="post">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="conclusiones">Conclusiones</label>
+                                <textarea class="form-control col-12" name="conclusiones"
+                                          id="conclusiones">{{ info.conclusiones }}</textarea>
+                            </div>
+                            <button class="btn btn-dark btn-sm float-end" type="button" id="save-comment"
+                            data-url="{{ path('cliente_comentario',{'id':info.id}) }}"
+                            >
+                                <small>Guardar Comentario</small></button>
+                            <i class="text-success" id="comment-save-success"></i>
+                            <div class="form-group mt-4">
+                                <label class="font-weight-bold">Tipo de Reporte: </label>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipo_reporte"
+                                               value="informe" checked required>
+                                        Informe
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipo_reporte"
+                                               value="preliminar">
+                                        Preliminar
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <input type="hidden" name="tabla_datos" id="tabla-datos" value="">
+                            <button type="submit" id="sb" class="btn btn-primary"
+                            >Generar Reporte
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Button trigger modal -->
+
+    {% embed "partials/modal.html.twig" with {'id':'liquidacionalanio','title':'Liquidación al año'} %}
+        {% block model_size %}modal-sm{% endblock %}
+        {% block modal_content %}
+            <form action="{{ path('client_year_update', {'uniqid': info.uniqId}) }}" class="col-lg-12" method="post">
+                <div class="form-group">
+                    <select name="value" id="value" class="form-control" required>
+                        <option value="">Seleccione...</option>
+                        {% for anio in "now"|date('Y').."now"|date('Y')-20 %}
+                            <option value="{{ anio }}"
+                                    {% if info.cotizacionAnio ==  anio %} selected{% endif %}>
+                                {{ anio }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group pt-2">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        {% endblock %}
+    {% endembed %}
+    {% embed "partials/modal.html.twig" with {'id':'totalsemanas','title':'Total Semanas'} %}
+        {% block model_size %}modal-sm{% endblock %}
+        {% block modal_content %}
+            <form action="{{ path('client_weeks_update', {'uniqid': info.uniqId}) }}" class="col-lg-12" method="post">
+                <div class="form-group">
+                    <input name="value" id="value" class="form-control" required value="{{ info.totalWeeks }}">
+                </div>
+                <div class="form-group pt-2">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        {% endblock %}
+    {% endembed %}
+
+{% endblock %}
+{% block javascripts %}
+    <script src="https://cdn.tiny.cloud/1/q18zc748ct3jmuiuw5xh95uiwymtwme0cewb3dr138jpcgmc/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+    // Inicializar TinyMCE cuando DOM y librería estén listos
+    (function() {
+        function initTinyMCE() {
+            console.log('Intentando inicializar TinyMCE...', {
+                tinymceLoaded: typeof tinymce !== 'undefined',
+                domReady: document.readyState
+            });
+
+            if (typeof tinymce !== 'undefined' && document.readyState === 'complete') {
+                tinymce.init({
+                    selector: 'textarea#conclusiones',
+                    height: 300,
+                    menubar: false,
+                    plugins: [
+                        'advlist autolink lists link image charmap print preview anchor',
+                        'searchreplace visualblocks code fullscreen',
+                        'insertdatetime media table paste code help wordcount'
+                    ],
+                    toolbar: 'undo redo | formatselect | ' +
+                        'bold italic backcolor | alignleft aligncenter ' +
+                        'alignright alignjustify | bullist numlist outdent indent | ' +
+                        'removeformat | help',
+                    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                    setup: function(editor) {
+                        editor.on('init', function() {
+                            console.log('TinyMCE editor inicializado y listo');
+                        });
+                    }
+                });
+                console.log('TinyMCE.init() llamado correctamente');
+            } else {
+                console.log('Esperando... TinyMCE o DOM no están listos todavía');
+                setTimeout(initTinyMCE, 100);
+            }
+        }
+
+        // Esperar a que el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(initTinyMCE, 100);
+            });
+        } else {
+            setTimeout(initTinyMCE, 100);
+        }
+    })();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-maskmoney/3.0.2/jquery.maskMoney.min.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+    <script>
+        $(function () {
+            'use strict';
+            var datos = $("#table-reporte").parent().html();
+            $('#tabla-datos').val(datos);
+
+            $("#original").click(function () {
+                var new_val = $(this).data('value');
+                $("#semanas_act").val(new_val);
+                $("#form-semanas").submit();
+            });
+
+            $("a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                var id = $(e.target).attr("href").substr(1);
+                window.location.hash = id;
+            });
+
+// on load of the page: switch to the currently selected tab
+            var hash = window.location.hash;
+            $('#tabs a[href="' + hash + '"]').tab('show');
+
+            $(".salario").maskMoney({thousands: ',', decimal: '.', allowZero: true, precision: 0});
+
+
+            $('#agregar-fecha').click(function () {
+                var pos = parseInt($(this).val()) + 1;
+                $.post('{{ path('proyection_add') }}', {pos: pos}, function (data) {
+                    var $append = $(data).appendTo("#list-proyection");
+                    $append.find('.salario').maskMoney(
+                        {
+                            thousands: ',',
+                            decimal: '.',
+                            allowZero: true,
+                            precision: 0
+                        }
+                    );
+                    $append.find('.daterange').daterangepicker({
+                        "showDropdowns": true,
+                        "minYear": 2021,
+                        "showWeekNumbers": true,
+                        "locale": {
+                            "format": "MM/YYYY",
+                            "separator": " - ",
+                            "applyLabel": "Aplicar",
+                            "cancelLabel": "Cancelar",
+                            "fromLabel": "Desde",
+                            "toLabel": "Hasta",
+                            "customRangeLabel": "Custom",
+                            "weekLabel": "S",
+                            "daysOfWeek": [
+                                "Do",
+                                "Lu",
+                                "Ma",
+                                "Mi",
+                                "Ju",
+                                "Vi",
+                                "Sa"
+                            ],
+                            "monthNames": [
+                                "Enero",
+                                "Febrero",
+                                "Marzo",
+                                "Abril",
+                                "Mayo",
+                                "Junio",
+                                "Julio",
+                                "Agosto",
+                                "Septiembre",
+                                "Octubre",
+                                "Noviembre",
+                                "Deciembre"
+                            ],
+                            "firstDay": 1
+                        },
+                        "alwaysShowCalendars": true,
+                        "startDate": "{{ "now"|date('m/Y') }}",
+                    }, function (start, end, label) {
+                        console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+                    });
+                });
+                $(this).val(pos);
+            });
+            $('body').on('click', '.delete-row', function (e) {
+                e.preventDefault();
+                var $id = $(this).data('id');
+                $('#row-range').find('#' + $id).empty();
+
+            })
+        });
+
+    </script>
+
+<!-- Panel de Chat con Claude -->
+<div id="claude-chat-panel" class="claude-chat-panel">
+    <div class="chat-header">
+        <h5>
+            <i class="fas fa-robot"></i> Asistente de Pensiones
+        </h5>
+        <button id="close-chat" class="btn-close-chat">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="chat-messages" class="chat-messages">
+        <div class="chat-message assistant">
+            <div class="message-content">
+                <p>¡Hola! Soy tu asistente de liquidación de pensiones. Puedo ayudarte a:</p>
+                <ul>
+                    <li>Analizar datos de cotización por períodos</li>
+                    <li>Calcular proyecciones de pensión</li>
+                    <li>Explicar fórmulas y cálculos</li>
+                    <li>Responder preguntas sobre el informe</li>
+                </ul>
+                <p>¿En qué puedo ayudarte?</p>
+            </div>
+        </div>
+    </div>
+    <div class="chat-input">
+        <textarea id="chat-input-text" placeholder="Escribe tu pregunta aquí..." rows="2"></textarea>
+        <button id="send-chat" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<button id="open-chat" class="btn-open-chat">
+    <i class="fas fa-robot"></i>
+    <span>Asistente IA</span>
+</button>
+
+<style>
+.claude-chat-panel {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.claude-chat-panel.open {
+    right: 0;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.chat-header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-minimize-chat,
+.btn-close-chat {
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-minimize-chat:hover,
+.btn-close-chat:hover {
+    background: rgba(255,255,255,0.4);
+    border-color: rgba(255,255,255,0.6);
+    transform: scale(1.05);
+}
+
+.claude-chat-panel.minimized {
+    height: auto !important;
+}
+
+.claude-chat-panel.minimized .chat-messages,
+.claude-chat-panel.minimized .chat-input {
+    display: none;
+}
+
+.claude-chat-panel.minimized .btn-minimize-chat i:before {
+    content: "\\f067"; /* fa-plus */
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.chat-message {
+    margin-bottom: 15px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message.user {
+    text-align: right;
+}
+
+.message-content {
+    display: inline-block;
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.chat-message.user .message-content {
+    background: #667eea;
+    color: white;
+}
+
+.chat-message.assistant .message-content {
+    background: white;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.message-content p {
+    margin: 0 0 10px 0;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content ul, .message-content ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.message-content code {
+    background: #f4f4f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.message-content pre {
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.chat-input {
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 10px;
+}
+
+#chat-input-text {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    resize: none;
+    font-family: inherit;
+}
+
+#send-chat {
+    align-self: flex-end;
+}
+
+.btn-open-chat {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+    transition: all 0.3s ease;
+}
+
+.btn-open-chat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-open-chat.hidden {
+    display: none;
+}
+
+.message-loading {
+    display: inline-block;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.message-loading::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+</style>
+
+<script>
+// Sistema de chat con Claude
+var CLAUDE_CHAT = {
+    history: [],
+    uniqid: '{{ info.uniqId }}',
+    
+    init: function() {
+        this.bindEvents();
+    },
+    
+    bindEvents: function() {
+        var self = this;
+        
+        $('#open-chat').on('click', function() {
+            self.openPanel();
+        });
+        
+        $('#close-chat').on('click', function() {
+            self.closePanel();
+        });
+        
+        $('#send-chat').on('click', function() {
+            self.sendMessage();
+        });
+        
+        $('#chat-input-text').on('keypress', function(e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                self.sendMessage();
+            }
+        });
+    },
+    
+    openPanel: function() {
+        $('#claude-chat-panel').addClass('open');
+        $('#open-chat').addClass('hidden');
+        $('#chat-input-text').focus();
+    },
+    
+    closePanel: function() {
+        $('#claude-chat-panel').removeClass('open');
+        $('#open-chat').removeClass('hidden');
+    },
+    
+    sendMessage: function() {
+        var message = $('#chat-input-text').val().trim();
+        if (!message) return;
+        
+        // Limpiar input
+        $('#chat-input-text').val('');
+        
+        // Agregar mensaje del usuario
+        this.addMessage('user', message);
+        
+        // Agregar indicador de carga
+        var loadingId = 'loading-' + Date.now();
+        $('#chat-messages').append('<div class="chat-message assistant" id="' + loadingId + '"><div class="message-loading">Pensando</div></div>');
+        this.scrollToBottom();
+        
+        // Enviar a servidor
+        var self = this;
+        $.ajax({
+            url: '{{ path('client_chat', {'uniqid': info.uniqId}) }}',
+            method: 'POST',
+            data: {
+                message: message,
+                history: JSON.stringify(this.history)
+            },
+            success: function(response) {
+                $('#' + loadingId).remove();
+                
+                if (response.success) {
+                    self.addMessage('assistant', response.message);
+                    self.history.push({role: 'user', content: message});
+                    self.history.push({role: 'assistant', content: response.message});
+                } else {
+                    self.addMessage('assistant', 'Error: ' + (response.error || 'No se pudo procesar la respuesta'));
+                }
+            },
+            error: function() {
+                $('#' + loadingId).remove();
+                self.addMessage('assistant', 'Error de conexión. Por favor intenta de nuevo.');
+            }
+        });
+    },
+    
+    addMessage: function(role, content) {
+        var messageClass = role === 'user' ? 'user' : 'assistant';
+        var formattedContent = this.formatMarkdown(content);
+        
+        var messageHtml = '<div class="chat-message ' + messageClass + '">' +
+                         '<div class="message-content">' + formattedContent + '</div>' +
+                         '</div>';
+        
+        $('#chat-messages').append(messageHtml);
+        this.scrollToBottom();
+    },
+    
+    formatMarkdown: function(text) {
+        // Convertir markdown básico a HTML
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+        text = text.replace(/\n/g, '<br>');
+        
+        // Convertir listas
+        text = text.replace(/^- (.+)/gm, '<li>$1</li>');
+        text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        
+        return text;
+    },
+    
+    scrollToBottom: function() {
+        var messages = $('#chat-messages');
+        messages.scrollTop(messages[0].scrollHeight);
+    }
+};
+
+$(document).ready(function() {
+    CLAUDE_CHAT.init();
+});
+</script>
+
+{% endblock %}
+{% block stylesheets %}
+{% endblock %}

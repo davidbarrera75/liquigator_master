@@ -1,0 +1,331 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Proyeccion{% endblock %}
+{% block id %}proyeccion{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+    <div class="card col-12">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-sm-8">
+                    <div class="row">
+                        {% for p in info.proyecciones %}
+                            <div class="col-sm-6">
+                                <div class="card">
+                                    <div class="card-header bg-dark text-white text-center text-uppercase">
+                                        {{ p.titulo }}
+                                    </div>
+                                    <div class="card-body bg-light">
+                                        <div class="row">
+                                            <table class="table table-sm">
+                                                {% for pr in p.jsonData.proyeccion %}
+                                                    <tr>
+
+                                                        <td><b>Salario</b><br>
+                                                            $&nbsp;{{ pr['salario'] }}
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                                <tr>
+                                                    <th>Meses</th>
+                                                    <td class="text-right">{{ p.jsonData.meses }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Total Semanas</th>
+                                                    <td class="text-right">{{ p.jsonData.semanas|number_format(2) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>IBL</th>
+                                                    <td class="text-right">
+                                                        $&nbsp;{{ p.jsonData.ibl|number_format(2) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>s</th>
+                                                    <td class="text-right">{{ p.jsonData.s|number_format(2) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>r</th>
+                                                    <td class="text-right">{{ (p.jsonData.r*100)|number_format(2) }}
+                                                        %
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Total Porcentaje</th>
+                                                    <td class="text-right">{{ (p.jsonData.x*100)|number_format(2) }}
+                                                        %
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Pensión Básica</th>
+                                                    <td class="text-right">
+                                                        $&nbsp;{{ p.jsonData.r1|number_format(2) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Pensión Total <small>(Tomando el total de
+                                                            semanas)</small>
+                                                    </th>
+                                                    <td class="text-right">
+                                                        $&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
+                                                </tr>
+
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer btn-group btn-group-sm text-center">
+                                        <a href="{{ path('proyeccion_pdf',{'id':p.id}) }}" target="_blank"
+                                           class="btn btn-outline-primary btn-sm">DESCARGAR</a>
+                                        <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+                                                data-bs-target="#detalles{{ p.id }}">DETALLES
+                                        </button>
+                                        <button type="button"
+                                                data-url="{{ path('proyection_delete',{'id':p.id}) }}"
+                                                class="btn btn-outline-dark btn-sm proyeccion-eliminar">
+                                            ELIMINAR
+                                        </button>
+                                        {% embed "partials/modal.html.twig" with {'id':'detalles'~p.id,'title':'Detalle'} %}
+                                            {% block modal_content %}
+                                                {% include 'main/template_data_reporte.html.twig' with {'data':p.jsonData.data} %}
+                                                <table class="table table-sm">
+                                                    {% for pr in p.jsonData.proyeccion %}
+                                                        <tr>
+
+                                                            <td><b>Salario</b><br>
+                                                                $&nbsp;{{ pr['salario'] }}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                    <tr>
+                                                        <th>Meses</th>
+                                                        <td class="text-right">{{ p.jsonData.meses }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Total Semanas</th>
+                                                        <td class="text-right">{{ p.jsonData.semanas|number_format(2) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>IBL</th>
+                                                        <td class="text-right">
+                                                            $&nbsp;{{ p.jsonData.ibl|number_format(2) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>s</th>
+                                                        <td class="text-right">{{ p.jsonData.s|number_format(2) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>r</th>
+                                                        <td class="text-right">{{ (p.jsonData.r*100)|number_format(2) }}
+                                                            %
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Total Porcentaje</th>
+                                                        <td class="text-right">{{ (p.jsonData.x*100)|number_format(2) }}
+                                                            %
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Pensión Básica</th>
+                                                        <td class="text-right">
+                                                            $&nbsp;{{ p.jsonData.r1|number_format(2) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Pensión Total <small>(Tomando el total de
+                                                                semanas)</small>
+                                                        </th>
+                                                        <td class="text-right">
+                                                            $&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
+                                                    </tr>
+
+                                                </table>
+                                            {% endblock %}
+                                        {% endembed %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <button type="button" class="btn btn-primary btn-SM btn-block" data-bs-toggle="modal"
+                            data-bs-target="#modelId">
+                        AGREGAR ESCENARIO
+                    </button>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Salario Mínimo {{ anio }}</th>
+                            <td class="text-right">$ {{ salario|number_format(0) }}</td>
+                        </tr>
+                        <tr>
+                            <th>Tope 25 SMMLV</th>
+                            <td class="text-right">$ {{ tope|number_format(0) }}</td>
+                        </tr>
+                        <tr>
+                            <th>Último IBC reportado</th>
+                            <td class="text-right">{{ info.cotizacionAnio|number_format(0) }}</td>
+                        </tr>
+                        <tr>
+                            <th>Aporte de última pensión</th>
+                            <td class="text-right">$ {{ lastRecord.val|number_format(0) }}</td>
+                        </tr>
+                        {% for key,value in ad %}
+                            {% if key == 'R2' %}
+                                <tr>
+                                    <th>Pensión Actual</th>
+                                    <td class="text-right">{{ value|raw }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Button trigger modal -->
+    <!-- Modal -->
+    <div class="modal fade" id="modelId" tabindex="-1" role="dialog" aria-labelledby="modelTitleId" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <form action="{{ path('proyection_name') }}" method="post" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">AGREGAR ESCENARIO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="table" id="row-range">
+                        <tbody id="list-proyection">
+                        {% include 'main/proyeccion.html.twig' with {'pos':1} %}
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                <button class="btn btn-dark" type="button" value=1 id="agregar-fecha">Agregar Fecha
+                                </button>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                    <div class="col-lg-12">
+                        <div class="form-group">
+                            <label for="titulo">Titulo</label>
+                            <input name="titulo" id="titulo" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" name="client" value="{{ info.uniqId }}">
+
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Generar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+{% block javascripts %}
+    <script src="{{ asset('vendor/jquery.maskMoney.js') }}"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+    <script>
+        $(function () {
+            'use strict';
+
+            function dates($element) {
+                $element.daterangepicker({
+                    "showDropdowns": true,
+                    "minYear": 2021,
+                    "showWeekNumbers": true,
+                    "locale": {
+                        "format": "MM/YYYY",
+                        "separator": " - ",
+                        "applyLabel": "Aplicar",
+                        "cancelLabel": "Cancelar",
+                        "fromLabel": "Desde",
+                        "toLabel": "Hasta",
+                        "customRangeLabel": "Custom",
+                        "weekLabel": "S",
+                        "daysOfWeek": [
+                            "Do",
+                            "Lu",
+                            "Ma",
+                            "Mi",
+                            "Ju",
+                            "Vi",
+                            "Sa"
+                        ],
+                        "monthNames": [
+                            "Enero",
+                            "Febrero",
+                            "Marzo",
+                            "Abril",
+                            "Mayo",
+                            "Junio",
+                            "Julio",
+                            "Agosto",
+                            "Septiembre",
+                            "Octubre",
+                            "Noviembre",
+                            "Deciembre"
+                        ],
+                        "firstDay": 1
+                    },
+                    "alwaysShowCalendars": true,
+                    "startDate": "{{ "now"|date('m/Y') }}",
+                }, function (start, end, label) {
+                    console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+                });
+            }
+
+            var datos = $("#table-reporte").parent().html();
+            $('#tabla-datos').val(datos);
+
+            $("#original").click(function () {
+                var new_val = $(this).data('value');
+                $("#semanas_act").val(new_val);
+                $("#form-semanas").submit();
+            });
+
+
+            $("a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                var id = $(e.target).attr("href").substr(1);
+                window.location.hash = id;
+            });
+
+// on load of the page: switch to the currently selected tab
+            var hash = window.location.hash;
+            $('#tabs a[href="' + hash + '"]').tab('show');
+
+            $(".salario").maskMoney({thousands: ',', decimal: '.', allowZero: true, precision: 0});
+            dates($('.daterange'));
+
+            $('#agregar-fecha').click(function () {
+                var pos = parseInt($(this).val()) + 1;
+                $.post('{{ path('proyection_add') }}', {pos: pos}, function (data) {
+                    var $append = $(data).appendTo("#list-proyection");
+                    $append.find('.salario').maskMoney(
+                        {
+                            thousands: ',',
+                            decimal: '.',
+                            allowZero: true,
+                            precision: 0
+                        }
+                    );
+                    dates($append.find('.daterange'));
+                });
+                $(this).val(pos);
+            });
+            $('body').on('click', '.delete-row', function (e) {
+                e.preventDefault();
+                var $id = $(this).data('id');
+                $('#row-range').find('#' + $id).empty();
+
+            });
+
+        });
+
+    </script>
+{% endblock %}
+{% block stylesheets %}
+{% endblock %}

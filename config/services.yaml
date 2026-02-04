@@ -1,0 +1,63 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+  directory: '%kernel.project_dir%/public/upload/'
+  reports: '%kernel.project_dir%/public/reports/'
+services:
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+  # makes classes in src/ available to be used as services
+  # this creates a service per class whose id is the fully-qualified class name
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
+      - '../src/Tests/'
+
+  # controllers are imported separately to make sure services can be injected
+  # as action arguments even if you don't extend any base controller class
+  App\Controller\:
+    resource: '../src/Controller/'
+    tags: [ 'controller.service_arguments' ]
+
+  # add more service definitions when explicit configuration is needed
+  # please note that last definitions always *replace* previous ones
+
+
+  app.ipc_service:
+    class: App\Service\IpcService
+    arguments: [ '@doctrine.orm.entity_manager' ]
+    public: true
+
+  app.extract_service:
+    class: App\Service\ExtractService
+    arguments: [ '@doctrine.orm.entity_manager','@App\Service\IpcService' ]
+    public: true
+
+  App\Service\FileUploader:
+    arguments:
+      $targetDirectory: '%directory%'
+
+  App\Service\ClaudeService:
+    arguments:
+      $anthropicApiKey: '%env(ANTHROPIC_API_KEY)%'
+
+  App\Service\PdfPlumberService:
+    arguments:
+      $projectDir: '%kernel.project_dir%'
+      $ipcService: '@App\Service\IpcService'
+
+  App\Controller\MainController:
+    arguments:
+      $projectDir: '%kernel.project_dir%'
+    tags: ['controller.service_arguments']
+
+

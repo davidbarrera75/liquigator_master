@@ -1,0 +1,251 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Resumen{% endblock %}
+{% block id %}client{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+    <div class="card col-12">
+        <div class="card-body">
+            {% include 'main/template_data_reporte.html.twig' with {'data':data} %}
+            <div class="row">
+                <!-- Modal -->
+
+                <div class="col-sm-12 col-md-6 col-lg-4">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Liquidación al año</th>
+                            <td class="text-end">
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#liquidacionalanio">
+                                    {{ info.cotizacionAnio }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Total Semanas</th>
+                            <td class="text-end"><a href="#" data-bs-toggle="modal"
+                                                    data-bs-target="#totalsemanas">{{ info.totalWeeks }}</a></td>
+                        </tr>
+                        <tr>
+                            <th>Semanas Básicas</th>
+                            <td class="text-end">{{ ad['Semanas Básicas'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Días Calculados</th>
+                            <td class="text-end">{{ ad['Días Calculados'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Semanas Adicionales</th>
+                            <td class="text-end">{{ ad['Semanas Adicionales'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Porcentaje Adicional</th>
+                            <td class="text-end">{{ ad['Porcentaje Adicional'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>IBL</th>
+                            <td class="text-end">{{ ad['IBL']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <th>s</th>
+                            <td class="text-end">{{ ad['S'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>r</th>
+                            <td class="text-end">{{ ad['R'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Porcentaje</th>
+                            <td class="text-end">{{ ad['X'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pensión Básica</th>
+                            <td class="text-end">{{ ad['R1']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
+                            <td class="text-end">{{ ad['R2']|raw }}</td>
+                        </tr>
+
+                    </table>
+                </div>
+                <div class="col-sm-12 col-md-6 col-lg-8">
+                    <form class="card border-primary" action="{{ path('report_pdf',{'id':info.id}) }}"
+                          method="post">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="conclusiones">Conclusiones</label>
+                                <textarea class="form-control col-12" name="conclusiones"
+                                          id="conclusiones">{{ info.conclusiones }}</textarea>
+                            </div>
+                            <button class="btn btn-dark btn-sm float-end" type="button" id="save-comment"
+                            data-url="{{ path('cliente_comentario',{'id':info.id}) }}"
+                            >
+                                <small>Guardar Comentario</small></button>
+                            <i class="text-success" id="comment-save-success"></i>
+                            <div class="form-group mt-4">
+                                <label class="font-weight-bold">Tipo de Reporte: </label>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipo_reporte"
+                                               value="informe" checked required>
+                                        Informe
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipo_reporte"
+                                               value="preliminar">
+                                        Preliminar
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <input type="hidden" name="tabla_datos" id="tabla-datos" value="">
+                            <button type="submit" id="sb" class="btn btn-primary"
+                            >Generar Reporte
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Button trigger modal -->
+
+    {% embed "partials/modal.html.twig" with {'id':'liquidacionalanio','title':'Liquidación al año'} %}
+        {% block model_size %}modal-sm{% endblock %}
+        {% block modal_content %}
+            <form action="{{ path('client_year_update', {'uniqid': info.uniqId}) }}" class="col-lg-12" method="post">
+                <div class="form-group">
+                    <select name="value" id="value" class="form-control" required>
+                        <option value="">Seleccione...</option>
+                        {% for anio in "now"|date('Y').."now"|date('Y')-20 %}
+                            <option value="{{ anio }}"
+                                    {% if info.cotizacionAnio ==  anio %} selected{% endif %}>
+                                {{ anio }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group pt-2">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        {% endblock %}
+    {% endembed %}
+    {% embed "partials/modal.html.twig" with {'id':'totalsemanas','title':'Total Semanas'} %}
+        {% block model_size %}modal-sm{% endblock %}
+        {% block modal_content %}
+            <form action="{{ path('client_weeks_update', {'uniqid': info.uniqId}) }}" class="col-lg-12" method="post">
+                <div class="form-group">
+                    <input name="value" id="value" class="form-control" required value="{{ info.totalWeeks }}">
+                </div>
+                <div class="form-group pt-2">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        {% endblock %}
+    {% endembed %}
+
+{% endblock %}
+{% block javascripts %}
+    <script src="https://cdn.tiny.cloud/1/tujvebfbqo7so7i0nps8e78sf4w6rfe7ksl1lrmll57thkp5/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>    <script src="{{ asset('vendor/jquery.maskMoney.js') }}"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css"/>
+    <script>
+        $(function () {
+            'use strict';
+            var datos = $("#table-reporte").parent().html();
+            $('#tabla-datos').val(datos);
+
+            $("#original").click(function () {
+                var new_val = $(this).data('value');
+                $("#semanas_act").val(new_val);
+                $("#form-semanas").submit();
+            });
+
+            $("a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                var id = $(e.target).attr("href").substr(1);
+                window.location.hash = id;
+            });
+
+// on load of the page: switch to the currently selected tab
+            var hash = window.location.hash;
+            $('#tabs a[href="' + hash + '"]').tab('show');
+
+            $(".salario").maskMoney({thousands: ',', decimal: '.', allowZero: true, precision: 0});
+
+
+            $('#agregar-fecha').click(function () {
+                var pos = parseInt($(this).val()) + 1;
+                $.post('{{ path('proyection_add') }}', {pos: pos}, function (data) {
+                    var $append = $(data).appendTo("#list-proyection");
+                    $append.find('.salario').maskMoney(
+                        {
+                            thousands: ',',
+                            decimal: '.',
+                            allowZero: true,
+                            precision: 0
+                        }
+                    );
+                    $append.find('.daterange').daterangepicker({
+                        "showDropdowns": true,
+                        "minYear": 2021,
+                        "showWeekNumbers": true,
+                        "locale": {
+                            "format": "MM/YYYY",
+                            "separator": " - ",
+                            "applyLabel": "Aplicar",
+                            "cancelLabel": "Cancelar",
+                            "fromLabel": "Desde",
+                            "toLabel": "Hasta",
+                            "customRangeLabel": "Custom",
+                            "weekLabel": "S",
+                            "daysOfWeek": [
+                                "Do",
+                                "Lu",
+                                "Ma",
+                                "Mi",
+                                "Ju",
+                                "Vi",
+                                "Sa"
+                            ],
+                            "monthNames": [
+                                "Enero",
+                                "Febrero",
+                                "Marzo",
+                                "Abril",
+                                "Mayo",
+                                "Junio",
+                                "Julio",
+                                "Agosto",
+                                "Septiembre",
+                                "Octubre",
+                                "Noviembre",
+                                "Deciembre"
+                            ],
+                            "firstDay": 1
+                        },
+                        "alwaysShowCalendars": true,
+                        "startDate": "{{ "now"|date('m/Y') }}",
+                    }, function (start, end, label) {
+                        console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+                    });
+                });
+                $(this).val(pos);
+            });
+            $('body').on('click', '.delete-row', function (e) {
+                e.preventDefault();
+                var $id = $(this).data('id');
+                $('#row-range').find('#' + $id).empty();
+
+            })
+        });
+
+    </script>
+{% endblock %}
+{% block stylesheets %}
+{% endblock %}

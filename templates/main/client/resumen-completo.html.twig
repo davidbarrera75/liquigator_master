@@ -1,0 +1,442 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Resumen Completo{% endblock %}
+{% block id %}client{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info,'new_title':'TODA LA VIDA'} %}
+
+    <div class="card col-12">
+        <div class="card-body">
+            {% include 'main/template_data_reporte.html.twig' with {'data':data_complete} %}
+            <hr>
+            <table class="table table-sm">
+                <tr>
+                    <th>Liquidaciòn al año</th>
+                    <td class="text-end">
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#liquidacionalanio">
+                            {{ info.cotizacionAnio }}
+                        </a>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Total Semanas
+                    </th>
+                    <td class="text-end"><a href="#" data-bs-toggle="modal"
+                                            data-bs-target="#totalsemanas">{{ info.totalWeeks }}</a></td>
+                </tr>
+                <tr>
+                    <th>Semanas Básicas</th>
+                    <td class="text-end">{{ ad['Semanas Básicas'] }}</td>
+                </tr>
+                <tr>
+                    <th>Semanas Adicionales</th>
+                    <td class="text-end">{{ ad['Semanas Adicionales'] }}</td>
+                </tr>
+                <tr>
+                    <th>Porcentaje Adicional</th>
+                    <td class="text-end">{{ ad['Porcentaje Adicional'] }}</td>
+                </tr>
+                <tr>
+                    <th>IBL</th>
+                    <td class="text-end">{{ ad['IBL']|raw }}</td>
+                </tr>
+                <tr>
+                    <th>s</th>
+                    <td class="text-end">{{ ad['S'] }}</td>
+                </tr>
+                <tr>
+                    <th>r</th>
+                    <td class="text-end">{{ ad['R'] }}</td>
+                </tr>
+                <tr>
+                    <th>Total Porcentaje</th>
+                    <td class="text-end">{{ ad['X'] }}</td>
+                </tr>
+                <tr>
+                    <th>Pensión Básica</th>
+                    <td class="text-end">{{ ad['R1']|raw }}</td>
+                </tr>
+                <tr>
+                    <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
+                    <td class="text-end">{{ ad['R2']|raw }}</td>
+                </tr>
+
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascripts %}
+<!-- Panel de Chat con Claude -->
+<div id="claude-chat-panel" class="claude-chat-panel">
+    <div class="chat-header">
+        <h5>
+            <i class="fas fa-robot"></i> Asistente de Pensiones (Historia Completa)
+        </h5>
+        <div class="chat-header-buttons">
+            <button id="minimize-chat" class="btn-minimize-chat" title="Minimizar">
+                <i class="fas fa-minus"></i>
+            </button>
+            <button id="close-chat" class="btn-close-chat" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div id="chat-messages" class="chat-messages">
+        <div class="chat-message assistant">
+            <div class="message-content">
+                <p>¡Hola! Soy tu asistente con acceso a <strong>toda tu historia laboral completa</strong>. Puedo ayudarte a:</p>
+                <ul>
+                    <li>Analizar datos de cualquier período de tu historia</li>
+                    <li>Comparar salarios entre diferentes épocas</li>
+                    <li>Calcular proyecciones con toda la información</li>
+                    <li>Explicar fórmulas y cálculos detalladamente</li>
+                </ul>
+                <p>¿En qué puedo ayudarte?</p>
+            </div>
+        </div>
+    </div>
+    <div class="chat-input">
+        <textarea id="chat-input-text" placeholder="Escribe tu pregunta aquí..." rows="2"></textarea>
+        <button id="send-chat" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<button id="open-chat" class="btn-open-chat">
+    <i class="fas fa-robot"></i>
+    <span>Asistente IA</span>
+</button>
+
+<style>
+.claude-chat-panel {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.claude-chat-panel.open {
+    right: 0;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.chat-header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-minimize-chat,
+.btn-close-chat {
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-minimize-chat:hover,
+.btn-close-chat:hover {
+    background: rgba(255,255,255,0.4);
+    border-color: rgba(255,255,255,0.6);
+    transform: scale(1.05);
+}
+
+.claude-chat-panel.minimized {
+    height: auto !important;
+}
+
+.claude-chat-panel.minimized .chat-messages,
+.claude-chat-panel.minimized .chat-input {
+    display: none;
+}
+
+.claude-chat-panel.minimized .btn-minimize-chat i:before {
+    content: "\\f067"; /* fa-plus */
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.chat-message {
+    margin-bottom: 15px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message.user {
+    text-align: right;
+}
+
+.message-content {
+    display: inline-block;
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.chat-message.user .message-content {
+    background: #667eea;
+    color: white;
+}
+
+.chat-message.assistant .message-content {
+    background: white;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.message-content p {
+    margin: 0 0 10px 0;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content ul, .message-content ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.message-content code {
+    background: #f4f4f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.message-content pre {
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.chat-input {
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 10px;
+}
+
+#chat-input-text {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    resize: none;
+    font-family: inherit;
+}
+
+#send-chat {
+    align-self: flex-end;
+}
+
+.btn-open-chat {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+    transition: all 0.3s ease;
+}
+
+.btn-open-chat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-open-chat.hidden {
+    display: none;
+}
+
+.message-loading {
+    display: inline-block;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.message-loading::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+</style>
+
+<script>
+// Sistema de chat con Claude - Vista completa
+var CLAUDE_CHAT = {
+    history: [],
+    uniqid: '{{ info.uniqId }}',
+    
+    init: function() {
+        this.bindEvents();
+    },
+    
+    bindEvents: function() {
+        var self = this;
+        
+        $('#open-chat').on('click', function() {
+            self.openPanel();
+        });
+        
+        $('#close-chat').on('click', function() {
+            self.closePanel();
+        });
+        
+        $('#send-chat').on('click', function() {
+            self.sendMessage();
+        });
+        
+        $('#chat-input-text').on('keypress', function(e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                self.sendMessage();
+            }
+        });
+    },
+    
+    openPanel: function() {
+        $('#claude-chat-panel').addClass('open');
+        $('#open-chat').addClass('hidden');
+        $('#chat-input-text').focus();
+    },
+    
+    closePanel: function() {
+        $('#claude-chat-panel').removeClass('open');
+        $('#open-chat').removeClass('hidden');
+    },
+    
+    sendMessage: function() {
+        var message = $('#chat-input-text').val().trim();
+        if (!message) return;
+        
+        // Limpiar input
+        $('#chat-input-text').val('');
+        
+        // Agregar mensaje del usuario
+        this.addMessage('user', message);
+        
+        // Agregar indicador de carga
+        var loadingId = 'loading-' + Date.now();
+        $('#chat-messages').append('<div class="chat-message assistant" id="' + loadingId + '"><div class="message-loading">Pensando</div></div>');
+        this.scrollToBottom();
+        
+        // Enviar a servidor con flag de vista completa
+        var self = this;
+        $.ajax({
+            url: '{{ path('client_chat', {'uniqid': info.uniqId}) }}',
+            method: 'POST',
+            data: {
+                message: message,
+                history: JSON.stringify(this.history),
+                full_history: true  // Flag para indicar que queremos historia completa
+            },
+            success: function(response) {
+                $('#' + loadingId).remove();
+                
+                if (response.success) {
+                    self.addMessage('assistant', response.message);
+                    self.history.push({role: 'user', content: message});
+                    self.history.push({role: 'assistant', content: response.message});
+                } else {
+                    self.addMessage('assistant', 'Error: ' + (response.error || 'No se pudo procesar la respuesta'));
+                }
+            },
+            error: function() {
+                $('#' + loadingId).remove();
+                self.addMessage('assistant', 'Error de conexión. Por favor intenta de nuevo.');
+            }
+        });
+    },
+    
+    addMessage: function(role, content) {
+        var messageClass = role === 'user' ? 'user' : 'assistant';
+        var formattedContent = this.formatMarkdown(content);
+        
+        var messageHtml = '<div class="chat-message ' + messageClass + '">' +
+                         '<div class="message-content">' + formattedContent + '</div>' +
+                         '</div>';
+        
+        $('#chat-messages').append(messageHtml);
+        this.scrollToBottom();
+    },
+    
+    formatMarkdown: function(text) {
+        // Convertir markdown básico a HTML
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+        text = text.replace(/\n/g, '<br>');
+        
+        // Convertir listas
+        text = text.replace(/^- (.+)/gm, '<li>$1</li>');
+        text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        
+        return text;
+    },
+    
+    scrollToBottom: function() {
+        var messages = $('#chat-messages');
+        messages.scrollTop(messages[0].scrollHeight);
+    }
+};
+
+$(document).ready(function() {
+    CLAUDE_CHAT.init();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>INFORME PENSIÓN - RÉGIMEN DE PRIMA MEDIA</title>
+    <link rel="shortcut icon" href="https://app.liquigator.digital/img/LIQUIGATOR_.png"
+          type="image/x-icon">
+
+    <style type="text/css">
+        @import url(//fonts.googleapis.com/css?family=Cambria);
+
+        @page {
+            margin: 0cm 0cm;
+        }
+
+        /** Define now the real margins of every page in the PDF **/
+        body {
+            margin-top: 5cm;
+            margin-left: 2.54cm;
+            margin-right: 2.54cm;
+            margin-bottom: 2.54cm;
+        }
+
+        * {
+            font-family: Cambria, Georgia, serif;
+        }
+
+        table {
+            font-size: small;
+        }
+
+        tfoot tr td {
+            font-weight: bold;
+            font-size: small;
+        }
+
+        .gray {
+            background-color: lightgray
+        }
+
+        /** Define the header rules **/
+        header {
+            position: fixed;
+            top: 0cm;
+            left: 0cm;
+            right: 0cm;
+            /*height: 0cm;*/
+        }
+
+        header p {
+            left: 2.54cm !important;
+            margin-left: 2.54cm !important;
+            text-align: left;
+            color: #053665;
+            font-size: 20px !important;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 1cm;
+            left: 0cm;
+            right: 0cm;
+            height: 0cm;
+        }
+
+        .page_break {
+            page-break-before: always;
+        }
+
+        .page_initial {
+            text-align: center;
+            color: #053665;
+            font-size: 150%;
+        }
+
+        .page_info {
+            position: relative;
+            font-size: x-large;
+        }
+
+        .page_info ul {
+            position: static;
+            top: 40%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: 0% 0 0 0%;
+            list-style: none;
+        }
+
+        .page_text, .page_text-ol {
+            position: relative;
+            font-size: large;
+        }
+
+        .page_text p {
+            position: absolute;
+            text-align: justify;
+            top: 30%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+        .page_text-ol p {
+            position: absolute;
+            text-align: justify;
+            top: 30%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+        .page_text-ol ol, .page_text-ol ul {
+            position: absolute;
+            text-align: justify;
+            top: 50%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+
+    </style>
+
+</head>
+<body>
+<header>
+    <img src="{{ header }}" alt="" width="100%">
+</header>
+<footer>
+    <img src="{{ footer }}" alt="ghfghfhgf" width="100%">
+</footer>
+<main>
+    <div class="page_initial">
+        <h1>ESTUDIO DE SU PENSIÓN</h1>
+        <img src="{{ imagen_initial }}" alt="">
+    </div>
+
+    <div class="page_break"></div>
+
+    <div class="page_info">
+        <ul>
+            <li><b>NOMBRE:</b> {{ info.fullName }}</li>
+            <li><b>CÉDULA:</b> {{ info.identification|number_format(0,',','.') }}</li>
+            <li><b>FECHA DE NACIMIENTO:</b> {{ info.birthdate|date('d/m/Y') }}</li>
+            <li><b>EDAD:</b> {{ info.edad }} AÑOS</li>
+            <li><b>AFILIADO(A) ACTUALMENTE EN:</b> {{ info.fondo|upper }}</li>
+            <li><b>SEMANAS COTIZADAS A {{ last_record|date('M/Y')|upper }}
+                    :</b> {{ info.totalWeeks|number_format(0,',','.') }}</li>
+        </ul>
+        <p>Este estudio profesional de su expectativa pensional le permitirá adoptar las medidas necesarias para obtener
+            una pensión de acuerdo a sus necesidades.</p>
+        <p>Precisiones sobre Régimen de Prima Media. </p>
+        <ol>
+            <li>La edad de pensión del hombre es 62 años y la mujer es 57 años</li>
+            <li>Las semanas requeridas son: 1.300</li>
+            <li>El ingreso Base de Liquidación se obtiene de los últimos 10 años cotizados.</li>
+        </ol>
+    </div>
+    <div class="page_break"></div>
+    <div class="page_info">
+        <p>Con esta información usted podrá: <br>
+            <small>&#8226; Conocer el número de semanas cotizadas</small><br>
+            <small>&#8226; Saber el valor real de la pensión en el régimen de prima media</small><br>
+            <small>&#8226; Le brindamos la asesoría necesaria para aumentar el monto de su pensión..</small>
+        </p>
+        <h4 style="text-align: center">CÓMO SE EFECTÚA LA LIQUIDACIÓN</h4>
+        <p>Para la obtención de la Liquidación de la pensión en el Régimen de Prima Media (RPM) se siguen los parámetros
+            que indica la Ley 100 de 1993 (Modificada por la Ley 797 de 2003) en sus artículos 21, 33 y 36: </p>
+        <ol>
+            <li>Se obtiene el promedio salarial de los últimos 10 años, a lo que se le
+                denomina IBL (Ingreso Base de Liquidación)
+            </li>
+            <li>Se actualizan los salarios al año de liquidación de acuerdo al IPC
+                acumulado.
+            </li>
+            <li>Al IBL se le aplica la tasa de reemplazo conforme a la fórmula r=
+                65,5%- (s*0,5%) donde “s” es igual al número de salarios mínimos
+                que representa el IBL.
+            </li>
+            <li>El porcentaje se incrementará en 1,5% del IBL por cada 50 semanas
+                adicionales.
+            </li>
+        </ol>
+    </div>
+    <div class="page_break"></div>
+    <h4 style="text-align: center">REPORTE DETALLADO</h4>
+    {{ reporte|raw }}
+    <h4>Conclusiones</h4>
+    <div style="text-align: justify">{{ info.conclusiones|raw }}</div>
+    <table width="100%">
+        <tr>
+            <td><h4>DETALLE</h4></td>
+        </tr>
+        <tr style="font-size: x-small">
+            <td width="50%" valign="top">
+
+                <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th>IBL</th>
+                        <td style="text-align: right">{{ info.resume['IBL']|raw }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">{{ info.resume['R'] }}</td>
+                        <td style="text-align: right">{{ info.resume['R1']|raw }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <th style="text-align: center">{{ info.resume['X'] }}</th>
+                        <th style="text-align: right">{{ info.resume['R2']|raw }}</th>
+                    </tr>
+                </table>
+            </td>
+            <td width="50%" valign="top">
+                <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th style="text-align: center">S</th>
+                        <td style="text-align: right">{{ info.resume['S'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>S.M.M.L.V</th>
+                        <td style="text-align: right">{{ smmlv|number_format(0) }}</td>
+                    </tr>
+                </table>
+                <br>
+                <table width="100%" border="0.1" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th>% BÁSICO</th>
+                        <th>% ADICIONAL</th>
+
+                    </tr>
+                    <tr>
+                        <td>r=65,5%-(s*0,5%)</td>
+                        <td>{{ info.totalWeeks|round(2) }} <small>Semanas</small></td>
+                    </tr>
+                    <tr>
+                        <td>65,50%</td>
+                        <td>1300 <small>Básicas</small></td>
+                    </tr>
+                    <tr>
+                        <td>{{ info.resume['Porcentaje Adicional'] }}</td>
+                        <td>{{ info.resume['Semanas Adicionales'] }} <small>Adicionales</small>
+                        </td>
+
+                    </tr>
+                    <tr>
+                        <td>{{ info.resume['IBL']|raw }}</td>
+                        <td>1.5%</td>
+                    </tr>
+                    <tr style="background-color: lightgray">
+                        <th>SUMA</th>
+                        <td>{{ info.resume['X'] }}</td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+    <div class="page_break"></div>
+<div style="font-size: large;text-align: justify">
+    <table style="width: 100%;">
+        <tr>
+            <th width="50%" style="text-align: center"><h3 style="font-size: large">INFORME ELABORADO POR <BR> <B>FABIÁN GUARÍN</B></h3></th>
+            <th width="50%"><img src="{{ elaborado_por }}" alt="" width="80%"></th>
+        </tr>
+    </table>
+    <p>Abogado dedicado a ejercer en asuntos relacionados con
+        Pensiones. Experiencia de más de 20 años, Catedrático en
+        Pensiones en la especialización en derecho laboral, egresado de la
+        Universidad Externado de Colombia, especializado en Derecho
+        Laboral y Magíster en derecho del trabajo de la misma
+        Universidad. Además cuenta con un Master en Administración de
+        Empresas (MBA ) del INALDE – Universidad de la Sabana y
+        especialización de derecho de los negocios.</p>
+    <p>
+        Su experiencia profesional ha sido adquirida como asesor y
+        consultor Jurídico en el Banco Colpatria, en la Fiduciaria la
+        Previsora S.A, Abogado Especializado de la Dirección Jurídica
+        Nacional del Instituto de Seguros Sociales .
+    </p>
+    <p>
+        La consultoría que se suministra está dirigida a independientes,
+        trabajadores y pensionados con problemas relacionadas con el
+        régimen aplicable y su respectiva liquidación.</p>
+</div>
+
+
+
+</main>
+
+</body>
+</html>

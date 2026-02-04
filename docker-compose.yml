@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: liquigator_app
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/var/www/html
+      - ./var:/var/www/html/var
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=mysql://liquigator:liquigator_dev@db:3306/liquigator?serverVersion=8.0
+    networks:
+      - liquigator_network
+
+  db:
+    image: mysql:8.0
+    container_name: liquigator_db
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: liquigator
+      MYSQL_USER: liquigator
+      MYSQL_PASSWORD: liquigator_dev
+    volumes:
+      - liquigator_db_data:/var/lib/mysql
+      - ./docker/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - liquigator_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: liquigator_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_password
+    depends_on:
+      - db
+    networks:
+      - liquigator_network
+
+networks:
+  liquigator_network:
+    driver: bridge
+
+volumes:
+  liquigator_db_data:

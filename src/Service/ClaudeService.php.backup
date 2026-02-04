@@ -1,0 +1,623 @@
+<?php
+
+namespace App\Service;
+
+use Psr\Log\LoggerInterface;
+
+class ClaudeService
+{
+    private $apiKey;
+    private $logger;
+    private const API_URL = 'https://api.anthropic.com/v1/messages';
+    private const MODEL = 'claude-sonnet-4-5-20250929';
+    private const MAX_RETRIES = 5;
+    private const INITIAL_RETRY_DELAY = 2; // segundos
+
+    public function __construct(string $claudeApiKey, LoggerInterface $logger)
+    {
+        $this->apiKey = $claudeApiKey;
+        $this->logger = $logger;
+    }
+
+    /**
+     * Extrae datos del PDF usando Claude Vision API
+     *
+     * @param string $pdfPath Ruta completa al archivo PDF
+     * @param string $fondoType Tipo de fondo (skandia, colpensiones, porvenir, etc.)
+     * @return array Datos extraídos en formato JSON
+     */
+    public function extractPdfData(string $pdfPath, string $fondoType): array
+    {
+        try {
+            // Convertir PDF a imágenes PNG
+            $this->logger->info("Convirtiendo PDF a imágenes...");
+            $imagesPaths = $this->convertPdfToImages($pdfPath);
+
+            if (empty($imagesPaths)) {
+                throw new \Exception("No se pudieron generar imágenes del PDF");
+            }
+
+            $totalPages = count($imagesPaths);
+            $this->logger->info("PDF convertido a {$totalPages} imagen(es)");
+
+            // Si el PDF tiene más de 8 páginas, procesarlo por chunks
+            if ($totalPages > 8) {
+                $this->logger->info("PDF grande detectado ({$totalPages} páginas). Procesando por chunks de 4 páginas...");
+                $result = $this->extractPdfDataChunked($imagesPaths, $fondoType);
+                $this->cleanupTempImages($imagesPaths);
+                return $result;
+            }
+
+            // Para PDFs pequeños (<=8 páginas), usar el método original
+            $this->logger->info("PDF pequeño ({$totalPages} páginas), procesando completo");
+            $result = $this->extractPdfDataSingle($imagesPaths, $fondoType);
+            $this->cleanupTempImages($imagesPaths);
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Error extracting PDF with Claude: ' . $e->getMessage());
+
+            // Limpiar imágenes temporales en caso de error
+            if (isset($imagesPaths)) {
+                $this->cleanupTempImages($imagesPaths);
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Extrae datos de un PDF pequeño en una sola llamada
+     */
+    private function extractPdfDataSingle(array $imagesPaths, string $fondoType): array
+    {
+        $prompt = $this->buildPromptForFondo($fondoType);
+        $content = [];
+
+        // Agregar todas las imágenes
+        foreach ($imagesPaths as $imagePath) {
+            $imageContent = file_get_contents($imagePath);
+            $base64Image = base64_encode($imageContent);
+
+            $content[] = [
+                'type' => 'image',
+                'source' => [
+                    'type' => 'base64',
+                    'media_type' => 'image/png',
+                    'data' => $base64Image
+                ]
+            ];
+        }
+
+        $content[] = [
+            'type' => 'text',
+            'text' => $prompt
+        ];
+
+        $payload = [
+            'model' => self::MODEL,
+            'max_tokens' => 16384,
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => $content
+                ]
+            ]
+        ];
+
+        $response = $this->callClaudeApi($payload);
+        return $this->parseClaudeResponse($response, $fondoType);
+    }
+
+    /**
+     * Extrae datos de un PDF grande procesándolo por chunks de páginas
+     */
+    private function extractPdfDataChunked(array $imagesPaths, string $fondoType): array
+    {
+        $allData = [];
+        $totalPages = count($imagesPaths);
+        $chunkSize = 4; // 4 páginas por chunk
+        $chunkCount = ceil($totalPages / $chunkSize);
+
+        $this->logger->info("Procesando {$totalPages} páginas en {$chunkCount} chunks de {$chunkSize} páginas");
+
+        for ($i = 0; $i < $totalPages; $i += $chunkSize) {
+            $chunkNumber = floor($i / $chunkSize) + 1;
+            $endPage = min($i + $chunkSize, $totalPages);
+            $chunkImages = array_slice($imagesPaths, $i, $chunkSize);
+
+            $this->logger->info("Chunk {$chunkNumber}/{$chunkCount}: Procesando páginas " . ($i + 1) . "-{$endPage}");
+
+            try {
+                $chunkData = $this->extractPdfDataSingle($chunkImages, $fondoType);
+
+                // Merge los datos (los datos vienen en formato legacy con estructura específica)
+                if (empty($allData)) {
+                    $allData = $chunkData;
+                } else {
+                    // Para Colpensiones el formato es un array simple de arrays
+                    if (isset($chunkData[0]) && is_array($chunkData[0])) {
+                        $allData = array_merge($allData, $chunkData);
+                    } else {
+                        // Otros fondos pueden tener estructura diferente
+                        $allData = array_merge_recursive($allData, $chunkData);
+                    }
+                }
+
+                $this->logger->info("Chunk {$chunkNumber} completado. Total acumulado: " . count($allData) . " registros");
+
+            } catch (\Exception $e) {
+                $this->logger->error("Error en chunk {$chunkNumber}: " . $e->getMessage());
+                // Continuar con el siguiente chunk en lugar de fallar completamente
+                continue;
+            }
+        }
+
+        $this->logger->info("Procesamiento por chunks completado. Total final: " . count($allData) . " registros");
+        return $allData;
+    }
+
+    /**
+     * Convierte PDF a imágenes PNG usando GhostScript
+     *
+     * @param string $pdfPath Ruta al PDF
+     * @return array Array de rutas a las imágenes generadas
+     */
+    private function convertPdfToImages(string $pdfPath): array
+    {
+        $tempDir = sys_get_temp_dir();
+        $timestamp = time();
+        $randomId = bin2hex(random_bytes(4));
+        $outputPattern = "$tempDir/pdf2img_{$timestamp}_{$randomId}_%d.png";
+
+        // Usar GhostScript para convertir PDF a PNG
+        // -dNOPAUSE: no esperar entre páginas
+        // -sDEVICE=png16m: usar dispositivo PNG de 24 bits
+        // -r150: resolución de 150 DPI (balance entre calidad y tamaño)
+        // -dBATCH: salir después de procesar
+        $command = sprintf(
+            'gs -dNOPAUSE -sDEVICE=png16m -r150 -dBATCH -sOutputFile=%s %s 2>&1',
+            escapeshellarg($outputPattern),
+            escapeshellarg($pdfPath)
+        );
+
+        exec($command, $output, $returnCode);
+
+        if ($returnCode !== 0) {
+            $this->logger->error("GhostScript error: " . implode("\n", $output));
+            throw new \Exception("Error converting PDF to images: GhostScript returned code $returnCode");
+        }
+
+        // Buscar todas las imágenes generadas
+        $pattern = str_replace('%d', '*', $outputPattern);
+        $images = glob($pattern);
+
+        if (empty($images)) {
+            throw new \Exception("No images were generated from PDF");
+        }
+
+        // Ordenar las imágenes por número de página
+        sort($images);
+
+        return $images;
+    }
+
+    /**
+     * Limpia las imágenes temporales
+     *
+     * @param array $imagesPaths Array de rutas a las imágenes
+     */
+    private function cleanupTempImages(array $imagesPaths): void
+    {
+        foreach ($imagesPaths as $imagePath) {
+            if (file_exists($imagePath)) {
+                @unlink($imagePath);
+            }
+        }
+    }
+
+    private function buildPromptForFondo(string $fondoType): string
+    {
+        $basePrompt = "Analiza este documento PDF de pensiones y extrae TODOS los datos de cotizaciones en formato JSON estructurado.\n\n";
+
+        switch (strtolower($fondoType)) {
+            case 'skandia':
+                return $basePrompt . "Este es un documento del fondo SKANDIA. Busca la tabla 'Régimen de Ahorro Individual con Solidaridad' y extrae:\n" .
+                    "- Período en formato YYYYMM (ejemplo: 202101 para enero 2021, sin guiones ni separadores)\n" .
+                    "- Salario base de cotización (valor numérico entero)\n\n" .
+                    "IMPORTANTE: El período debe ser exactamente 6 dígitos sin separadores.\n\n" .
+                    "Retorna un JSON con esta estructura exacta:\n" .
+                    "{\n" .
+                    "  \"rows\": [\n" .
+                    "    {\"period\": \"202101\", \"salary\": 1500000},\n" .
+                    "    {\"period\": \"202102\", \"salary\": 1550000},\n" .
+                    "    ...\n" .
+                    "  ]\n" .
+                    "}";
+
+            case 'colpensiones':
+                return $basePrompt . "Este es un documento de COLPENSIONES. Busca las tablas con columnas '[3] Desde' y extrae:\n" .
+                    "- Fecha inicio en formato DD/MM/YYYY (ejemplo: 01/01/2021)\n" .
+                    "- Fecha fin en formato DD/MM/YYYY (ejemplo: 31/01/2021)\n" .
+                    "- IBC (Ingreso Base de Cotización) como número entero\n" .
+                    "- IMPORTANTE: Filtra solo las filas donde la columna de mora sea '0,00' (sin mora)\n\n" .
+                    "Retorna SOLO el JSON sin formato, compacto (sin espacios ni saltos de línea innecesarios):\n" .
+                    "{\"rows\":[{\"date_from\":\"01/01/2021\",\"date_to\":\"31/01/2021\",\"ibc\":1500000},{\"date_from\":\"01/02/2021\",\"date_to\":\"28/02/2021\",\"ibc\":1550000}]}";
+
+            case 'porvenir':
+                return $basePrompt . "Este es un documento de PORVENIR. Busca las tablas con 6 columnas y extrae:\n" .
+                    "- Período inicio en formato M/YYYY (ejemplo: 1/2021 para enero, 12/2021 para diciembre)\n" .
+                    "- Período fin en formato M/YYYY\n" .
+                    "- Salario como número entero\n\n" .
+                    "IMPORTANTE: El mes NO debe tener cero inicial (1 en vez de 01). El formato debe coincidir exactamente con M/YYYY.\n\n" .
+                    "Retorna un JSON con esta estructura exacta:\n" .
+                    "{\n" .
+                    "  \"rows\": [\n" .
+                    "    {\"period_from\": \"1/2021\", \"period_to\": \"1/2021\", \"salary\": 1500000},\n" .
+                    "    {\"period_from\": \"2/2021\", \"period_to\": \"2/2021\", \"salary\": 1550000},\n" .
+                    "    ...\n" .
+                    "  ]\n" .
+                    "}";
+
+            case 'colfondos':
+                return $basePrompt . "Este es un documento de COLFONDOS. Busca las tablas con 6 columnas y extrae:\n" .
+                    "- Período en formato YYYYMM (ejemplo: 202101 para enero 2021, sin separadores)\n" .
+                    "- Salario base como número entero\n\n" .
+                    "IMPORTANTE: El período debe ser exactamente 6 dígitos sin separadores.\n\n" .
+                    "Retorna un JSON con esta estructura exacta:\n" .
+                    "{\n" .
+                    "  \"rows\": [\n" .
+                    "    {\"period\": \"202101\", \"salary\": 1500000},\n" .
+                    "    {\"period\": \"202102\", \"salary\": 1550000},\n" .
+                    "    ...\n" .
+                    "  ]\n" .
+                    "}";
+
+            case 'proteccion':
+                return $basePrompt . "Este es un documento de PROTECCIÓN. Busca las tablas con 8 columnas y extrae:\n" .
+                    "- Período en formato YYYY/M (ejemplo: 2021/1 para enero, 2021/12 para diciembre)\n" .
+                    "- Salario como número entero\n\n" .
+                    "IMPORTANTE: El mes NO debe tener cero inicial (2021/1 en vez de 2021/01). El formato debe coincidir exactamente con YYYY/M.\n\n" .
+                    "Retorna un JSON con esta estructura exacta:\n" .
+                    "{\n" .
+                    "  \"rows\": [\n" .
+                    "    {\"period\": \"2021/1\", \"salary\": 1500000},\n" .
+                    "    {\"period\": \"2021/2\", \"salary\": 1550000},\n" .
+                    "    ...\n" .
+                    "  ]\n" .
+                    "}";
+
+            default:
+                return $basePrompt . "Extrae todos los datos de cotizaciones disponibles con períodos y salarios.";
+        }
+    }
+
+    /**
+     * Realiza llamadas a la API de Claude con reintentos y backoff exponencial
+     */
+    private function callClaudeApi(array $payload): array
+    {
+        $attempt = 0;
+        $lastError = null;
+
+        while ($attempt < self::MAX_RETRIES) {
+            $attempt++;
+            
+            try {
+                $this->logger->info("Claude API call attempt {$attempt}/" . self::MAX_RETRIES);
+                
+                $ch = curl_init(self::API_URL);
+
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($payload),
+                    CURLOPT_HTTPHEADER => [
+                        'Content-Type: application/json',
+                        'x-api-key: ' . $this->apiKey,
+                        'anthropic-version: 2023-06-01'
+                    ],
+                    CURLOPT_TIMEOUT => 120, // 2 minutos de timeout
+                ]);
+
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                if (curl_errno($ch)) {
+                    $error = curl_error($ch);
+                    curl_close($ch);
+                    throw new \Exception("CURL Error: " . $error);
+                }
+
+                curl_close($ch);
+
+                // Si es exitoso, retornar
+                if ($httpCode === 200) {
+                    $decoded = json_decode($response, true);
+
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new \Exception("Error decoding Claude API response: " . json_last_error_msg());
+                    }
+
+                    $this->logger->info("Claude API call successful on attempt {$attempt}");
+                    return $decoded;
+                }
+
+                // Manejar errores que merecen reintentos
+                $shouldRetry = in_array($httpCode, [429, 500, 502, 503, 504, 529]);
+                
+                if ($shouldRetry && $attempt < self::MAX_RETRIES) {
+                    $errorDetails = json_decode($response, true);
+                    $errorMessage = isset($errorDetails['error']['message']) 
+                        ? $errorDetails['error']['message'] 
+                        : 'Unknown error';
+                    
+                    // Calcular tiempo de espera con backoff exponencial
+                    // Intento 1: 2 segundos
+                    // Intento 2: 4 segundos
+                    // Intento 3: 8 segundos
+                    // Intento 4: 16 segundos
+                    // Intento 5: 32 segundos
+                    $delay = self::INITIAL_RETRY_DELAY * pow(2, $attempt - 1);
+                    
+                    $this->logger->warning(
+                        "Claude API Error (HTTP {$httpCode}): {$errorMessage}. " .
+                        "Reintentando en {$delay} segundos... (intento {$attempt}/" . self::MAX_RETRIES . ")"
+                    );
+                    
+                    sleep($delay);
+                    $lastError = "HTTP {$httpCode}: {$errorMessage}";
+                    continue;
+                }
+
+                // Si es un error no recuperable, lanzar excepción
+                $this->logger->error("Claude API Error: HTTP $httpCode - $response");
+                $errorDetails = json_decode($response, true);
+                $errorMessage = isset($errorDetails['error']['message']) 
+                    ? $errorDetails['error']['message'] 
+                    : $response;
+                throw new \Exception("Claude API Error: HTTP $httpCode - $errorMessage");
+
+            } catch (\Exception $e) {
+                $lastError = $e->getMessage();
+                
+                // Si no es un error de red o API temporal, no reintentar
+                if (strpos($lastError, 'CURL Error') === false && 
+                    strpos($lastError, 'Claude API Error: HTTP 429') === false &&
+                    strpos($lastError, 'Claude API Error: HTTP 529') === false &&
+                    strpos($lastError, 'Claude API Error: HTTP 500') === false &&
+                    strpos($lastError, 'Claude API Error: HTTP 502') === false &&
+                    strpos($lastError, 'Claude API Error: HTTP 503') === false &&
+                    strpos($lastError, 'Claude API Error: HTTP 504') === false) {
+                    throw $e;
+                }
+                
+                if ($attempt < self::MAX_RETRIES) {
+                    $delay = self::INITIAL_RETRY_DELAY * pow(2, $attempt - 1);
+                    $this->logger->warning(
+                        "Error temporal: {$lastError}. " .
+                        "Reintentando en {$delay} segundos... (intento {$attempt}/" . self::MAX_RETRIES . ")"
+                    );
+                    sleep($delay);
+                }
+            }
+        }
+
+        // Si agotamos todos los intentos
+        $this->logger->error("Claude API: Todos los intentos fallaron después de " . self::MAX_RETRIES . " intentos");
+        throw new \Exception("Claude API: Todos los intentos fallaron. Último error: " . $lastError);
+    }
+
+    private function parseClaudeResponse(array $response, string $fondoType): array
+    {
+        if (!isset($response['content'][0]['text'])) {
+            throw new \Exception("Invalid response structure from Claude API");
+        }
+
+        $text = $response['content'][0]['text'];
+        $textLength = strlen($text);
+        $this->logger->info("Claude response length: {$textLength} characters");
+        $this->logger->info("Claude response preview: " . substr($text, 0, 300));
+
+        $jsonData = null;
+
+        // Estrategia 1: Extraer JSON de bloques de código ```json ... ``` o ```...```
+        $startMarker = strpos($text, '```');
+        if ($startMarker !== false) {
+            // Encontrar el inicio del JSON después de los backticks
+            $jsonStart = strpos($text, '{', $startMarker);
+            if ($jsonStart !== false) {
+                // Encontrar el final de los backticks de cierre
+                $endMarker = strpos($text, '```', $jsonStart);
+                if ($endMarker !== false) {
+                    $candidate = substr($text, $jsonStart, $endMarker - $jsonStart);
+                    $this->logger->info("Strategy 1: Found JSON in code block (" . strlen($candidate) . " chars)");
+                    $jsonData = json_decode(trim($candidate), true);
+                    if ($jsonData && isset($jsonData['rows'])) {
+                        $this->logger->info("Strategy 1 SUCCESS: Parsed " . count($jsonData['rows']) . " rows");
+                        return $this->transformToLegacyFormat($jsonData, $fondoType);
+                    }
+                    $this->logger->warning("Strategy 1 FAILED: " . json_last_error_msg());
+                }
+            }
+        }
+
+        // Estrategia 2: Buscar JSON iterativamente desde cada '{'
+        $this->logger->info("Strategy 2: Iterative JSON search");
+        for ($i = 0; $i < $textLength; $i++) {
+            if ($text[$i] === '{') {
+                // Intentar parsear desde esta posición hasta el final
+                for ($j = $textLength; $j > $i; $j--) {
+                    if ($text[$j - 1] === '}') {
+                        $candidate = substr($text, $i, $j - $i);
+                        $decoded = json_decode($candidate, true);
+
+                        if ($decoded !== null && isset($decoded['rows']) && is_array($decoded['rows'])) {
+                            $rowCount = count($decoded['rows']);
+                            $this->logger->info("Strategy 2 SUCCESS: Found valid JSON with {$rowCount} rows");
+                            return $this->transformToLegacyFormat($decoded, $fondoType);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Estrategia 3: Intentar parsear todo el texto como JSON
+        $this->logger->info("Strategy 3: Parse entire response");
+        $jsonData = json_decode($text, true);
+        if ($jsonData && isset($jsonData['rows'])) {
+            $this->logger->info("Strategy 3 SUCCESS: Parsed " . count($jsonData['rows']) . " rows");
+            return $this->transformToLegacyFormat($jsonData, $fondoType);
+        }
+
+        // Si todo falló, loggear más información
+        $this->logger->error("ALL STRATEGIES FAILED");
+        $this->logger->error("Full response (first 1000 chars): " . substr($text, 0, 1000));
+        $this->logger->error("Full response (last 500 chars): " . substr($text, -500));
+
+        throw new \Exception("Could not extract valid JSON from Claude response. See logs for details.");
+    }
+
+    /**
+     * Transforma la respuesta de Claude al formato que espera el servicio legacy
+     */
+    private function transformToLegacyFormat(array $claudeData, string $fondoType): array
+    {
+        switch (strtolower($fondoType)) {
+            case 'skandia':
+                return $this->transformSkandia($claudeData);
+
+            case 'colpensiones':
+                return $this->transformColpensiones($claudeData);
+
+            case 'porvenir':
+                return $this->transformPorvenir($claudeData);
+
+            case 'colfondos':
+                return $this->transformColfondos($claudeData);
+
+            case 'proteccion':
+                return $this->transformProteccion($claudeData);
+
+            default:
+                throw new \Exception("Unknown fondo type: $fondoType");
+        }
+    }
+
+    private function transformSkandia(array $data): array
+    {
+        // Formato esperado por el método skandia() del controlador
+        $result = [
+            ['title' => 'Régimen de Ahorro Individual con Solidaridad', 'rows' => []]
+        ];
+
+        foreach ($data['rows'] as $row) {
+            // Formato: [período, ..., ..., salario]
+            // El período ya viene en formato YYYYMM desde Claude
+            $result[0]['rows'][] = [
+                $row['period'], // [0] Período en formato Ym (YYYYMM)
+                '',
+                '',
+                $row['salary']  // [3] Salario
+            ];
+        }
+
+        return $result;
+    }
+
+    private function transformColpensiones(array $data): array
+    {
+        $result = [
+            ['head' => ['[3] Desde'], 'rows' => []]
+        ];
+
+        foreach ($data['rows'] as $row) {
+            // Formato: [..., ..., fecha_desde, fecha_hasta, ibc, ..., ..., mora]
+            $result[0]['rows'][] = [
+                '',
+                '',
+                $row['date_from'],  // [2]
+                $row['date_to'],    // [3]
+                $row['ibc'],        // [4]
+                '',
+                '',
+                '0,00'              // [7] mora (siempre 0,00 por el filtro)
+            ];
+        }
+
+        return $result;
+    }
+
+    private function transformPorvenir(array $data): array
+    {
+        $result = [
+            ['rows' => []]
+        ];
+
+        foreach ($data['rows'] as $row) {
+            // Formato: [..., ..., ..., período_inicio, período_fin, salario]
+            $result[0]['rows'][] = [
+                '',
+                '',
+                '',
+                $row['period_from'], // [3]
+                $row['period_to'],   // [4]
+                $row['salary']       // [5]
+            ];
+        }
+
+        return $result;
+    }
+
+    private function transformColfondos(array $data): array
+    {
+        $result = [
+            ['rows' => []]
+        ];
+
+        foreach ($data['rows'] as $row) {
+            // Formato: [..., período, ..., ..., salario, ...]
+            $result[0]['rows'][] = [
+                '',
+                $row['period'],  // [1]
+                '',
+                '',
+                $row['salary'],  // [4]
+                ''
+            ];
+        }
+
+        return $result;
+    }
+
+    private function transformProteccion(array $data): array
+    {
+        $result = [
+            ['rows' => []]
+        ];
+
+        foreach ($data['rows'] as $row) {
+            // Formato: [..., ..., período, salario, ...]
+            $result[0]['rows'][] = [
+                '',
+                '',
+                $row['period'],  // [2]
+                $row['salary'],  // [3]
+                '',
+                '',
+                '',
+                ''
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Verifica si el servicio está configurado correctamente
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->apiKey) && $this->apiKey !== 'your-api-key-here';
+    }
+}

@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Importar Excel{% endblock %}
+{% block id %}client{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+
+    <div class="card">
+        <form action="{{ path('client_carga', {'id': info.id}) }}" method="post"
+              class="card-body row col-lg-12" enctype="multipart/form-data">
+            <div class="col-sm-4">
+                <div class="form-group">
+                    <label for="file">Carga</label>
+                    <div class="input-group mb-3">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" name="file" id="file"
+                                   placeholder="Pdf"
+                                   required
+                                   accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                   aria-describedby="fileHelpId">
+                            <label class="custom-file-label" for="inputGroupFile02">Cargar Excel</label>
+                            <small id="fileHelpId" class="form-text text-muted">Solo se admite
+                                xlsx</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <p><b>Nota: </b> <br>
+                    Se reemplazará los valores cargados anteriormente</p>
+            </div>
+            <div class="col-sm-4">
+                <p><b>Descargar plantilla: </b> <br>
+                    <a href="{{ asset('files/Plantilla_Liquidacion.xlsx') }}">Plantilla_Liquidacion</a>
+                </p>
+            </div>
+            <div class="form-group col-sm-12">
+                <button type="submit" class="btn btn-primary">Enviar</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

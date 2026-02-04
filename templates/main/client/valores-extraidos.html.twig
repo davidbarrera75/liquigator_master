@@ -1,0 +1,135 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Valores Extraídos del PDF{% endblock %}
+{% block id %}valores-extraidos{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h4 class="mb-0">📄 Valores Extraídos del PDF vs Valores Finales</h4>
+            <p class="text-muted mb-0"><small>Comparación de valores originales del PDF vs valores finales después de aplicar topes</small></p>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-6 col-sm-12">
+                    <h5>Años <sup class="text-secondary"><small>(Seleccionar año para ver detalles)</small></sup></h5>
+                    <nav class="nav nav-pills flex-column" style="height: 40vh; overflow: scroll">
+                        {% set years = [] %}
+                        {% for data in info.data %}
+                            {% set year = data.period|slice(0,4) %}
+                            {% if year not in years %}
+                                {% set years = years|merge([year]) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for y in years|sort|reverse %}
+                            <li class="nav-item">
+                                <a href="#" class="nav-link th-year" type="button"
+                                   data-target=".tr-{{ y }}"><small>{{ y }}</small></a>
+                            </li>
+                        {% endfor %}
+                    </nav>
+                </div>
+                <div class="col-lg-6 col-sm-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <strong>ℹ️ Información</strong>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Fondo:</strong> {{ info.fondo }}</p>
+                            <p><strong>Total registros:</strong> {{ info.data|length }}</p>
+                            <p class="alert alert-warning">
+                                <strong>⚠️ Nota Importante:</strong><br>
+                                • <strong>IBC Original:</strong> Valor extraído directamente del PDF<br>
+                                • <strong>Valor Final:</strong> Valor después de aplicar el tope de IBC<br>
+                                • Cuando aparece <i class="fas fa-exclamation-triangle text-warning"></i> y fondo amarillo,
+                                significa que el valor fue <strong>limitado por el tope</strong> y puedes ver la diferencia entre ambas columnas.<br>
+                                • <span class="badge bg-danger">TOPE</span> = Valor superó el tope |
+                                <span class="badge bg-success">OK</span> = Valor dentro del límite
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 table-responsive mt-3">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-dark">
+                        <tr>
+                            <th style="width: 100px">Año</th>
+                            <th style="width: 100px">Mes</th>
+                            <th style="width: 120px">Días</th>
+                            <th>IBC Original (del PDF)</th>
+                            <th>Valor Final (con Tope)</th>
+                            <th class="bg-info">Tope del Año</th>
+                            <th style="width: 80px">Estado</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for data in info.data|sort((a, b) => b.period <=> a.period) %}
+                            {% set periodArray = data.period|split('-') %}
+                            {% set year = periodArray[0] %}
+                            {% set month = periodArray[1] %}
+                            <tr class="tr tr-{{ year }}" style="display: none">
+                                <td>{{ year }}</td>
+                                <td>{{ month }}</td>
+                                <td>{{ data.daysPeriod }}</td>
+                                <td class="text-end">
+                                    {% if data.ibcOriginal is not null %}
+                                        <strong>$</strong> {{ data.ibcOriginal|number_format(0, ',', '.') }}
+                                    {% else %}
+                                        <span class="text-muted">Sin dato</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end {% if data.topeAplicado == 1 %}bg-warning bg-opacity-25{% endif %}">
+                                    {% set valorFinal = attribute(data, 'val') %}
+                                    {% if valorFinal is not null %}
+                                        <strong>$</strong> {{ valorFinal|number_format(0, ',', '.') }}
+                                        {% if data.topeAplicado == 1 %}
+                                            <i class="fas fa-exclamation-triangle text-warning ms-1" title="Valor limitado por tope"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Sin dato</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end bg-info bg-opacity-10">
+                                    {% if topes[year] is defined %}
+                                        <strong>$</strong> {{ topes[year]|number_format(0, ',', '.') }}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if data.topeAplicado == 1 %}
+                                        <span class="badge bg-danger" title="El valor original superó el tope de 25 SMLMV">TOPE</span>
+                                    {% else %}
+                                        <span class="badge bg-success" title="Valor dentro del límite">OK</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        $(document).ready(function() {
+            // Manejar el clic en los años
+            $('.th-year').on('click', function(e) {
+                e.preventDefault();
+                $('.th-year').removeClass('active');
+                $(this).addClass('active');
+
+                var target = $(this).data('target');
+                $('.tr').hide();
+                $(target).show();
+            });
+
+            // Mostrar el primer año por defecto
+            $('.th-year').first().click();
+        });
+    </script>
+{% endblock %}

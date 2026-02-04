@@ -1,0 +1,37 @@
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> symfony/phpunit-bridge ###
+.phpunit
+.phpunit.result.cache
+/phpunit.xml
+/.idea/
+.idea/
+.idea
+.idea/*
+.idea/workspace.xml
+
+###< symfony/phpunit-bridge ###
+public/upload
+reports/
+
+###> Docker ###
+docker/db/*.sql
+###< Docker ###
+
+###> macOS ###
+.DS_Store
+._*
+###< macOS ###
+
+###> Local backups ###
+backups/
+###< Local backups ###

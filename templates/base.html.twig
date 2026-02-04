@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Bienvenido!{% endblock %} | Liquigator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="shortcut icon" href="{{ asset('img/LIQUIGATOR345 -02.png') }}" type="image/png">
+
+    <link rel="stylesheet" href="{{ asset('bootstrap/bootstrap.css') }}">
+    <link rel="stylesheet" href="{{ asset('adminkit/css/app.css') }}">
+    {% block stylesheets %}{% endblock %}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body id="body-{% block id %}main{% endblock %}">
+{% block main %}
+<div class="wrapper">
+    <nav id="sidebar" class="sidebar js-sidebar" style="background: #16703f !important">
+        <div class="sidebar-content js-simplebar">
+            <a class="sidebar-brand" href="{{ path('main') }}" style="background-color: white">
+                <img src="{{ asset('img/LIQUIGATOR -04-01.png') }}" alt="Liquigator" class="align-middle"
+                     style="width: 150px;">
+            </a>
+
+            <ul class="sidebar-nav">
+                {% if info is defined %}
+                    <li class="sidebar-header">
+                        Menú informe
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('client',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('client',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="cpu"></i> <span class="align-middle">Resumen</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('proyeccion',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('proyeccion',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="bar-chart"></i> <span
+                                    class="align-middle">Proyección</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('historico',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('historico',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Histórico</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('importar-excel',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('importar-excel',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="file-text"></i> <span class="align-middle">Importar desde Excel</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('resumen-completo',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('resumen-completo',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="package"></i> <span class="align-middle">Resumen completo</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('reporte-mensual',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('reporte-mensual',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Reporte mensual</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('valores-extraidos',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('valores-extraidos',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="database"></i> <span class="align-middle">Valores Extraídos</span>
+                        </a>
+                    </li>
+
+                {% endif %}
+                <li class="sidebar-header">
+                    Menú Principal
+                </li>
+
+                <li class="sidebar-item {% if app.request.requestUri == path('main') %}active{% endif %}">
+                    <a class="sidebar-link" href="{{ path('main') }}">
+                        <i class="align-middle" data-feather="home"></i> <span class="align-middle">Inicio</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if app.request.requestUri == path('crearInforme') %}active{% endif %}">
+                    <a class="sidebar-link" href="{{ path('crearInforme') }}">
+                        <i class="align-middle" data-feather="align-left"></i> <span
+                                class="align-middle">Crear informe</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if app.request.requestUri == path('informes') %}active{% endif %}">
+                    <a class="sidebar-link" href="{{ path('informes') }}">
+                        <i class="align-middle" data-feather="grid"></i> <span
+                                class="align-middle">Informes Anteriores</span>
+                    </a>
+                </li>
+
+
+            </ul>
+
+        </div>
+    </nav>
+
+    <div class="main">
+        <nav class="navbar navbar-expand navbar-light navbar-bg">
+            <a class="sidebar-toggle js-sidebar-toggle">
+                <i class="hamburger align-self-center"></i>
+            </a>
+
+            <div class="navbar-collapse collapse">
+                <ul class="navbar-nav navbar-align">
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link d-none d-sm-inline-block" href="#">
+                            <img src="https://ui-avatars.com/api/?name={{ app.user.fullName }}&background=random&rounded=true"
+                                 class="avatar img-fluid rounded me-1" alt="Charles Hall"/> <span
+                                    class="text-dark">{{ app.user.fullName }}</span>
+                        </a>
+                        <a class="nav-link d-none d-sm-inline-block" href="/admin" style="margin-right: 15px;">
+                           <i class="align-middle" data-feather="settings"></i> Admin
+                        </a>
+                        <a class="nav-link d-none d-sm-inline-block" href="{{ path('app_logout') }}">
+                           <i class="align-middle" data-feather="log-out"></i> Salir
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="content">
+            <div class="container-fluid p-0">
+                {% for message in app.flashes('success') %}
+                    <div class="alert alert-success" role="alert">
+                        <button type="button" class="btn-close float-right"
+                                data-bs-dismiss="alert" aria-label="Close"
+                                style="right: 5px; position: absolute;"
+                        ></button>
+                        <h4 class="alert-heading">Éxito!</h4>
+                        <p>{{ message }}</p>
+                    </div>
+                {% endfor %}
+                {% for message in app.flashes('error') %}
+                    <div class="alert alert-danger" role="alert">
+                        <button type="button" class="btn-close float-right"
+                                data-bs-dismiss="alert" aria-label="Close"
+                                style="right: 5px; position: absolute;"
+                        ></button>
+                        <h4 class="alert-heading">Error!</h4>
+                        <p>{{ message }}</p>
+                    </div>
+                {% endfor %}
+                {% block body %}{% endblock %}
+            </div>
+
+            {% endblock %}
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+            <script src="{{ asset('bootstrap/bootstrap.js') }}"></script>
+            <script src="{{ asset('adminkit/js/app.js') }}"></script>
+            <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/jquery-editable/css/jquery-editable.css" rel="stylesheet"/>
+            <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/jquery-editable/js/jquery-editable-poshytip.min.js"></script>
+            <script src="{{ asset('js/extend.js') }}"></script>
+            <script src="{{ asset('js/main.js') }}?v={{ "now"|date('YmdHis') }}"></script>
+
+            {% block javascripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,305 @@
+#!/usr/bin/env python3
+"""
+Extractor de PDFs de fondos de pensiones colombianos
+Soporta: Colpensiones, Skandia, Porvenir, Colfondos, Protección
+"""
+
+import sys
+import json
+import re
+import unicodedata
+import pdfplumber
+from typing import List, Dict, Optional
+from datetime import datetime
+
+
+# Configuración de columnas por fondo
+FONDO_CONFIG = {
+    "colpensiones": {
+        "periodo_keywords": ["periodo", "period"],
+        "salario_keywords": ["ibc", "reportado", "ingreso", "base"],
+        "dias_keywords": ["diascot", "dias cot", "dias cotizados", "dias"],
+        "periodo_format": r"\d{6}",  # 199501
+        "periodo_transform": lambda p: f"{p[:4]}{p[4:]}",  # 199501 -> 199501
+        "extract_dias": True,  # Colpensiones extrae días cotizados
+    },
+    "skandia": {
+        "periodo_keywords": ["periodo", "period"],
+        "salario_keywords": ["salario", "base", "cotizacion"],
+        "periodo_format": r"\d{6}",  # 202301
+        "periodo_transform": lambda p: f"{p[:4]}{p[4:]}",  # 202301 -> 202301
+    },
+    "porvenir": {
+        "periodo_keywords": ["mes", "periodo"],
+        "salario_keywords": ["ibc", "ingreso", "base", "cotizacion"],
+        "periodo_format": r"\d{6}",
+        "periodo_transform": lambda p: f"{p[:4]}{p[4:]}",
+    },
+    "colfondos": {
+        "periodo_keywords": ["periodo", "cotizado"],
+        "salario_keywords": ["salario", "base", "cotizacion"],
+        "periodo_format": r"\d{6}",
+        "periodo_transform": lambda p: f"{p[:4]}{p[4:]}",
+    },
+    "proteccion": {
+        "periodo_keywords": ["mes", "periodo"],
+        "salario_keywords": ["ingreso", "base", "cotizacion"],
+        "periodo_format": r"\d{6}",
+        "periodo_transform": lambda p: f"{p[:4]}{p[4:]}",
+    },
+}
+
+
+def normalizar_texto(texto: str) -> str:
+    """
+    Normaliza texto: minúsculas, sin acentos, sin espacios extras
+    """
+    if not texto:
+        return ""
+
+    # Convertir a minúsculas
+    texto = texto.lower()
+
+    # Quitar acentos
+    texto = unicodedata.normalize('NFKD', texto)
+    texto = texto.encode('ASCII', 'ignore').decode('ASCII')
+
+    # Normalizar espacios
+    texto = ' '.join(texto.split())
+
+    return texto
+
+
+def limpiar_numero(valor: str) -> Optional[int]:
+    """
+    Limpia un string y lo convierte a entero
+    '$  181.425' -> 181425
+    '1.234.567,00' -> 1234567
+    """
+    if not valor:
+        return None
+
+    # Quitar símbolos y espacios
+    limpio = (
+        valor.replace("$", "")
+             .replace(".", "")
+             .replace(",", "")
+             .replace(" ", "")
+             .strip()
+    )
+
+    if not limpio:
+        return None
+
+    try:
+        return int(limpio)
+    except ValueError:
+        return None
+
+
+def encontrar_columna(header: List[str], keywords: List[str]) -> Optional[int]:
+    """
+    Busca en el header la columna que contiene alguna de las keywords
+    Ignora mayúsculas, espacios extras, saltos de línea y acentos
+    """
+    for i, cell in enumerate(header):
+        if cell is None:
+            continue
+
+        # Normalizar el texto de la celda
+        text_normalizado = normalizar_texto(cell.replace("\n", " "))
+
+        # Buscar cada keyword
+        for keyword in keywords:
+            keyword_normalizado = normalizar_texto(keyword)
+            if keyword_normalizado in text_normalizado:
+                return i
+
+    return None
+
+
+def extraer_tabla(
+    page: pdfplumber.page.Page,
+    config: Dict,
+    page_number: int
+) -> List[Dict]:
+    """
+    Extrae datos de una página según la configuración del fondo
+    """
+    registros = []
+    tables = page.extract_tables()
+
+    if not tables:
+        return registros
+
+    for table in tables:
+        if not table or len(table) < 2:
+            continue
+
+        header = table[0]
+        if not header:
+            continue
+
+        # Buscar columnas de período y salario
+        idx_periodo = encontrar_columna(header, config["periodo_keywords"])
+        idx_salario = encontrar_columna(header, config["salario_keywords"])
+
+        if idx_periodo is None or idx_salario is None:
+            continue
+
+        # Para colpensiones, buscar también columna de días cotizados
+        idx_dias = None
+        if config.get("extract_dias", False):
+            idx_dias = encontrar_columna(header, config["dias_keywords"])
+
+        # Extraer filas
+        for row in table[1:]:
+            if not row or len(row) <= max(idx_periodo, idx_salario):
+                continue
+
+            raw_periodo = (row[idx_periodo] or "").strip()
+            raw_salario = (row[idx_salario] or "").strip()
+
+            # Validar formato de período
+            if not re.fullmatch(config["periodo_format"], raw_periodo):
+                continue
+
+            # Transformar período
+            periodo = config["periodo_transform"](raw_periodo)
+
+            # Limpiar salario
+            salario = limpiar_numero(raw_salario)
+            if salario is None or salario == 0:
+                continue
+
+            # Preparar registro
+            registro = {
+                "periodo": periodo,
+                "salario": salario,
+                "page": page_number
+            }
+
+            # Extraer días cotizados si aplica (colpensiones)
+            if idx_dias is not None and idx_dias < len(row):
+                raw_dias = (row[idx_dias] or "").strip()
+                dias = limpiar_numero(raw_dias)
+                if dias and dias > 0:
+                    registro["dias"] = min(dias, 30)  # Máximo 30 días por mes
+
+            registros.append(registro)
+
+    return registros
+
+
+def extraer_pdf(pdf_path: str, fondo: str) -> Dict:
+    """
+    Extrae datos del PDF según el fondo especificado
+
+    Retorna:
+    {
+        "success": bool,
+        "fondo": str,
+        "total_rows": int,
+        "data": [{"periodo": "YYYYMM", "salario": int}, ...],
+        "error": str (opcional)
+    }
+    """
+    fondo = fondo.lower()
+
+    if fondo not in FONDO_CONFIG:
+        return {
+            "success": False,
+            "error": f"Fondo '{fondo}' no soportado. Opciones: {', '.join(FONDO_CONFIG.keys())}"
+        }
+
+    config = FONDO_CONFIG[fondo]
+    registros = []
+
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_number, page in enumerate(pdf.pages, start=1):
+                registros.extend(extraer_tabla(page, config, page_number))
+
+        # Eliminar duplicados y consolidar días
+        registros_por_periodo = {}
+        for reg in registros:
+            periodo = reg["periodo"]
+            if periodo not in registros_por_periodo:
+                registros_por_periodo[periodo] = {
+                    "salario": reg["salario"],
+                    "dias": reg.get("dias", 0)
+                }
+            else:
+                # Si hay múltiples registros del mismo período, sumar
+                registros_por_periodo[periodo]["salario"] += reg["salario"]
+                registros_por_periodo[periodo]["dias"] += reg.get("dias", 0)
+                # Limitar días a 30 por mes
+                registros_por_periodo[periodo]["dias"] = min(
+                    registros_por_periodo[periodo]["dias"], 30
+                )
+
+        # Convertir a lista y ordenar por período
+        data = sorted(
+            [{"periodo": p, "salario": info["salario"], "dias": info["dias"]}
+             for p, info in registros_por_periodo.items()],
+            key=lambda x: x["periodo"]
+        )
+
+        # Calcular semanas según el tipo de fondo
+        if config.get("extract_dias", False):
+            # Colpensiones: semanas = sum(días) / 7
+            total_dias = sum(r["dias"] for r in data)
+            total_semanas = total_dias / 7
+            days_array = {r["periodo"]: r["dias"] for r in data}
+        else:
+            # Otros fondos: 4.285714 semanas por mes
+            VALOR_MES = 360 / 7 / 12  # 4.285714
+            total_semanas = len(data) * VALOR_MES
+            total_dias = 0
+            days_array = {}
+
+        return {
+            "success": True,
+            "fondo": fondo,
+            "total_rows": len(data),
+            "semanas": total_semanas,
+            "dias": total_dias,
+            "days_array": days_array,
+            "data": data,
+            "extracted_at": datetime.now().isoformat()
+        }
+
+    except FileNotFoundError:
+        return {
+            "success": False,
+            "error": f"Archivo no encontrado: {pdf_path}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error al procesar PDF: {str(e)}"
+        }
+
+
+def main():
+    if len(sys.argv) != 3:
+        print(json.dumps({
+            "success": False,
+            "error": "Uso: python3 extract_pdf.py <ruta_pdf> <fondo>"
+        }))
+        sys.exit(1)
+
+    pdf_path = sys.argv[1]
+    fondo = sys.argv[2]
+
+    resultado = extraer_pdf(pdf_path, fondo)
+
+    # Imprimir JSON para que PHP lo capture
+    print(json.dumps(resultado, ensure_ascii=False, indent=2))
+
+    # Exit code según éxito
+    sys.exit(0 if resultado["success"] else 1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,18 @@
+<h1 class="h2 mb-3 text-center"><b>{% if new_title is not defined %}ÚLTIMOS 10 AÑOS{% else %}{{ new_title }}{% endif %}</b></h1>
+<h2 class="h2 mb-3 text-center"><b>LIQUIDACIÓN PENSIÓN RÉGIMEN DE PRIMA MEDIA</b></h2>
+<h3 class="h3 mb-3 text-center text-uppercase"><b>{{ info.fullName }}</b></h3>
+<div class="row">
+    <dl class="col-lg-4">
+        <dt>Fecha de Nacimiento</dt>
+        <dd>{{ info.birthdate|date('d M Y') }} <small>{{ info.edad }} años</small></dd>
+    </dl>
+    <dl class="col-lg-4">
+        <dt>Fondo de Pensiones</dt>
+        <dd class="text-uppercase">{{ info.fondo }}</dd>
+    </dl>
+    <dl class="col-lg-4">
+        <dt>Fecha de Informe</dt>
+        <dd class="text-uppercase">{{ info.createdAt|date('d/m/Y g:i a') }}</dd>
+    </dl>
+
+</div>

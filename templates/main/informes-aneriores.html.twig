@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Informes Anteriores{% endblock %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="//cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+{% endblock %}
+{% block id %}user{% endblock %}
+{% block body %}
+
+    <h1 class="h3 mb-3">Informes Anteriores</h1>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table class="table table-hover table-striped" id="table-informes">
+                        <thead class="thead-inverse">
+                        <tr>
+                            <th>Documento</th>
+                            <th>Cliente</th>
+                            <th>Edad</th>
+                            <th>Fondo de Pensiones</th>
+                            <th>Fecha de Creación</th>
+                            <th>Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for list in app.user.information %}
+                            <tr>
+                                <th scope="row" class="text-right">{{ list.identification|number_format(0) }}</th>
+                                <td>{{ list.fullName }}</td>
+                                <td>{{ list.edad }} años</td>
+                                <td>{{ list.fondo|upper }}</td>
+                                <td>{{ list.createdAt|date('Y-m-d H:i') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a class="btn btn-sm btn-primary"
+                                           href="{{ path('client', {'uniqid': list.uniqid}) }}">Ver</a>
+                                        <a class="btn btn-sm btn-danger eliminar-cliente"
+                                           href="@" data-url="{{ path('information_remove',{'id':list.id}) }}">Eliminar</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block javascripts %}
+    <script src="//cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#table-informes').DataTable({
+                order: [[4, 'desc']],
+                language: {
+                    "decimal": "",
+                    "emptyTable": "No hay información",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Entradas",
+                    "infoEmpty": "Mostrando 0 to 0 of 0 Entradas",
+                    "infoFiltered": "(Filtrado de _MAX_ total entradas)",
+                    "infoPostFix": "",
+                    "thousands": ",",
+                    "lengthMenu": "Mostrar _MENU_ Entradas",
+                    "loadingRecords": "Cargando...",
+                    "processing": "Procesando...",
+                    "search": "Buscar:",
+                    "zeroRecords": "Sin resultados encontrados",
+                    "paginate": {
+                        "first": "Primero",
+                        "last": "Ultimo",
+                        "next": "Siguiente",
+                        "previous": "Anterior"
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

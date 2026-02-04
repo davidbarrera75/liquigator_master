@@ -1,0 +1,550 @@
+<div class="table-responsive pt-2">
+    <table class="table table-bordered table-striped small table-sm" width="100%" border="1"
+           cellspacing="0" cellpadding="5" id="table-reporte">
+        <thead class="table-primary">
+        <tr>
+            <th class="text-center"><b>Años</b></th>
+            <th class="text-center"><b>Salario</b></th>
+            <th class="text-center"><b>Meses</b></th>
+            <th class="text-center"><b>IPC</b></th>
+            <th class="text-center" style="background-color: #FFA726 !important; color: #fff; font-weight: bold;">
+                <b>Salarios Actualizados</b><br>
+                <small style="font-size: 0.85em;">(Ajustados por Inflación)</small>
+            </th>
+            <th class="text-center" style="background-color: #FB8C00 !important; color: #fff; font-weight: bold;">
+                <b>Actualizado por Meses</b><br>
+                <small style="font-size: 0.85em;">(Ajustado por Inflación)</small>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for data in data.content %}
+            <tr>
+                <td>{{ data.period }}</td>
+                <td class="text-end {% if data.topeAplicado %}valor-topeado{% endif %}"
+                    {% if data.topeAplicado %}
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="⚠️ Limitado por tope de IBC | Valor original: ${{ data.ibcOriginal|number_format(0,'.',',') }}"
+                    {% endif %}>
+                    {{ data.val|number_format(0,'.',',') }}
+                    {% if data.topeAplicado %}<i class="fas fa-exclamation-triangle text-warning ms-1" style="font-size: 0.8em;"></i>{% endif %}
+                </td>
+                <td class="text-end">{{ data.conteo }}</td>
+                <td class="text-end">{{ data.ipc|number_format(6) }}</td>
+                <td class="text-end">{{ data.actualizado|number_format(2) }}</td>
+                <td class="text-end">{{ data.porMeses|number_format(2) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr>
+            <th></th>
+            <th></th>
+            <th class="text-end"><b>{{ data.resume.meses }}</b></th>
+            <th></th>
+            <th></th>
+            <th class="text-end"><b>{{ data.resume.total|number_format(2) }}</b></th>
+        </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- Sección de Gráfica de Evolución del IBL -->
+<div class="card mt-4" id="ibl-evolution-section">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;">
+        <h5 class="mb-0">
+            <i class="fas fa-chart-area"></i> Evolución Salarial - Salarios Ajustados por Inflación - Últimos 10 Años
+        </h5>
+        <button id="download-ibl-chart-btn" class="btn btn-light btn-sm">
+            <i class="fas fa-download"></i> Descargar Gráfica
+        </button>
+    </div>
+    <div class="card-body">
+        <!-- Banner destacado de valores actualizados -->
+        <div class="alert alert-warning border-0 text-center mb-3" style="background: linear-gradient(135deg, #FFA726 0%, #FB8C00 100%); border-left: 5px solid #E65100 !important;">
+            <h4 class="mb-2" style="color: #fff; font-weight: bold; font-size: 1.5rem;">
+                <i class="fas fa-exclamation-triangle"></i> VALORES ACTUALIZADOS POR INFLACIÓN (IPC)
+            </h4>
+            <p class="mb-0" style="color: #fff; font-size: 1.1rem; font-weight: 500;">
+                Todos los valores mostrados en esta gráfica están ajustados a pesos de {{ "now"|date('Y') }}
+            </p>
+        </div>
+
+        <p class="text-muted small">
+            <strong>¿Qué es el IBL?</strong> El Ingreso Base de Liquidación es el promedio de los salarios actualizados de los últimos 10 años.
+            Esta gráfica muestra cómo ha evolucionado el IBL año tras año, permitiendo identificar tendencias de crecimiento o estancamiento salarial.
+        </p>
+
+        <!-- Estadísticas del IBL -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card border-info">
+                    <div class="card-body text-center p-2">
+                        <small class="text-muted d-block">IBL Inicial</small>
+                        <h6 class="mb-0" id="ibl-inicial">Calculando...</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center p-2">
+                        <small class="text-muted d-block">IBL Actual</small>
+                        <h6 class="mb-0" id="ibl-actual">Calculando...</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center p-2">
+                        <small class="text-muted d-block">Crecimiento Total</small>
+                        <h6 class="mb-0" id="ibl-crecimiento">Calculando...</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center p-2">
+                        <small class="text-muted d-block">Crecimiento Anual</small>
+                        <h6 class="mb-0" id="ibl-anual">Calculando...</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="position: relative; height: 400px;">
+            <canvas id="ibl-evolution-chart"></canvas>
+        </div>
+        
+        <!-- Análisis Automático del IBL -->
+        <div id="ibl-analysis" class="alert mt-3" style="display:none;">
+            <h6 class="alert-heading"><i class="fas fa-analytics"></i> <span id="ibl-analysis-title"></span></h6>
+            <div id="ibl-analysis-content"></div>
+        </div>
+        
+        <div class="mt-3">
+            <small class="text-muted">
+                <strong>Interpretación:</strong> 
+                <span class="text-success">▲ IBL ascendente</span> indica mejora en el historial salarial. 
+                <span class="text-danger">▼ IBL descendente</span> indica períodos recientes con salarios más bajos.
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Script para Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    'use strict';
+    
+    // Esperar a que el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCharts);
+    } else {
+        initCharts();
+    }
+    
+    function initCharts() {
+        // Extraer datos de la tabla
+        var tableData = extractTableData();
+        
+        if (tableData.length === 0) {
+            console.warn('No hay datos para generar las gráficas');
+            return;
+        }
+        
+        // Gráfica de evolución del IBL
+        var iblData = calculateIBLEvolution(tableData);
+        renderIBLChart(iblData);
+        setupIBLDownloadButton();
+        updateIBLStats(iblData);
+        generateIBLAnalysis(iblData);
+    }
+    
+    function extractTableData() {
+        var data = [];
+        var rows = document.querySelectorAll('#table-reporte tbody tr');
+        
+        rows.forEach(function(row) {
+            var cells = row.querySelectorAll('td');
+            if (cells.length >= 6) {
+                var period = cells[0].textContent.trim();
+                var salarioOriginal = parseFloat(cells[1].textContent.replace(/,/g, ''));
+                var meses = parseFloat(cells[2].textContent);
+                var ipc = parseFloat(cells[3].textContent);
+                var actualizado = parseFloat(cells[4].textContent.replace(/,/g, ''));
+                var actualizadoPorMeses = parseFloat(cells[5].textContent.replace(/,/g, ''));
+                
+                if (period && !isNaN(salarioOriginal) && !isNaN(actualizado)) {
+                    data.push({
+                        period: period,
+                        year: parseInt(period),
+                        salarioOriginal: salarioOriginal,
+                        meses: meses,
+                        ipc: ipc,
+                        actualizado: actualizado,
+                        actualizadoPorMeses: actualizadoPorMeses
+                    });
+                }
+            }
+        });
+        
+        return data;
+    }
+    
+    // ===== ANÁLISIS AUTOMÁTICO DEL IBL =====
+    function generateIBLAnalysis(iblData) {
+        if (iblData.length < 2) return;
+        
+        var iblInicial = iblData[0].ibl;
+        var iblActual = iblData[iblData.length - 1].ibl;
+        var crecimientoTotal = ((iblActual - iblInicial) / iblInicial * 100);
+        var years = iblData.length - 1;
+        var crecimientoAnual = years > 0 ? crecimientoTotal / years : 0;
+        
+        var alertClass, icon, title, interpretation, recommendation;
+        
+        // Determinar tipo de tendencia
+        if (crecimientoAnual > 5) {
+            // POSITIVO: Crecimiento fuerte
+            alertClass = 'alert-success';
+            icon = '🟢';
+            title = 'ANÁLISIS DEL IBL - TENDENCIA POSITIVA';
+            interpretation = 'Excelente noticia: Su historial salarial muestra un <strong>crecimiento sostenido</strong>. ' +
+                'Los salarios recientes son significativamente mejores que los antiguos, lo que resulta en un IBL en constante mejora. ' +
+                'Este crecimiento del <strong>' + crecimientoAnual.toFixed(2) + '% anual</strong> es muy favorable.';
+            recommendation = '<strong>Recomendación:</strong> Mantener el rumbo actual. El historial salarial es sólido ' +
+                'y la tendencia es muy positiva para su pensión futura.';
+        } else if (crecimientoAnual >= -2 && crecimientoAnual <= 5) {
+            // NEUTRO: Crecimiento moderado o estable
+            alertClass = 'alert-warning';
+            icon = '🟡';
+            title = 'ANÁLISIS DEL IBL - TENDENCIA ESTABLE';
+            interpretation = 'Su historial salarial muestra <strong>estabilidad</strong> con un crecimiento moderado del ' +
+                '<strong>' + crecimientoAnual.toFixed(2) + '% anual</strong>. ';
+            
+            if (crecimientoAnual > 0) {
+                interpretation += 'El IBL está creciendo lentamente, lo cual es positivo pero podría mejorarse.';
+            } else if (crecimientoAnual < 0 && crecimientoAnual > -2) {
+                interpretation += 'Hay una leve tendencia a la baja que debe monitorearse.';
+            } else {
+                interpretation += 'Los salarios se mantienen relativamente constantes ajustados por inflación.';
+            }
+            
+            recommendation = '<strong>Recomendación:</strong> El historial es estable pero con margen de mejora. ' +
+                'Considere estrategias para incrementar el IBL en los próximos períodos si desea optimizar su pensión futura.';
+        } else {
+            // NEGATIVO: Decrecimiento
+            alertClass = 'alert-danger';
+            icon = '🔴';
+            title = 'ANÁLISIS DEL IBL - ALERTA DETECTADA';
+            var perdida = iblInicial - iblActual;
+            interpretation = '<strong>⚠️ Situación que requiere atención:</strong> El IBL ha disminuido en ' +
+                '<strong>$' + formatNumber(Math.abs(perdida)) + '</strong> (un ' + Math.abs(crecimientoAnual).toFixed(2) + '% anual). ' +
+                'Esto significa que los salarios recientes son más bajos que los históricos ajustados por inflación, ' +
+                'lo cual tendrá un <strong>impacto negativo en su pensión</strong>.';
+            recommendation = '<strong>🚨 Recomendación Urgente:</strong> Es crítico mejorar los salarios cotizados ' +
+                'en los próximos períodos. Consulte con su asesor sobre estrategias para aumentar cotizaciones ' +
+                'o mejorar el salario base de cotización. Cada mes cuenta para revertir esta tendencia.';
+        }
+        
+        var html = '<ul class="mb-2">';
+        html += '<li>' + icon + ' <strong>IBL Inicial (hace ' + years + ' años):</strong> $' + formatNumber(iblInicial) + '</li>';
+        html += '<li>' + icon + ' <strong>IBL Actual:</strong> $' + formatNumber(iblActual) + '</li>';
+        html += '<li>' + icon + ' <strong>Variación Total:</strong> ' + (crecimientoTotal >= 0 ? '▲' : '▼') + ' ' + Math.abs(crecimientoTotal).toFixed(2) + '%</li>';
+        html += '<li>' + icon + ' <strong>Velocidad de Cambio:</strong> ' + (crecimientoAnual >= 0 ? '▲' : '▼') + ' ' + Math.abs(crecimientoAnual).toFixed(2) + '% anual</li>';
+        html += '</ul>';
+        
+        html += '<hr class="my-2">';
+        html += '<p class="mb-2"><strong>💡 Interpretación:</strong><br>' + interpretation + '</p>';
+        html += '<p class="mb-0">' + recommendation + '</p>';
+        
+        document.getElementById('ibl-analysis-title').textContent = title;
+        document.getElementById('ibl-analysis-content').innerHTML = html;
+        document.getElementById('ibl-analysis').className = 'alert mt-3 ' + alertClass;
+        document.getElementById('ibl-analysis').style.display = 'block';
+    }
+    
+        function calculateIBLEvolution(tableData) {
+        var salaryHistory = [];
+
+        // Agrupar datos por año y sumar salarios ajustados
+        var yearlyData = {};
+
+        tableData.forEach(function(row) {
+            var year = row.year;
+            if (!yearlyData[year]) {
+                yearlyData[year] = {
+                    year: year,
+                    totalActualizado: 0,
+                    totalMeses: 0
+                };
+            }
+            yearlyData[year].totalActualizado += row.actualizadoPorMeses;
+            yearlyData[year].totalMeses += row.meses;
+        });
+
+        // Convertir a array y calcular salario promedio por año
+        for (var year in yearlyData) {
+            var data = yearlyData[year];
+            var salarioAnual = data.totalMeses > 0 ? data.totalActualizado / data.totalMeses : 0;
+
+            salaryHistory.push({
+                year: parseInt(year),
+                ibl: salarioAnual,
+                meses: data.totalMeses
+            });
+        }
+
+        // Ordenar por año
+        salaryHistory.sort(function(a, b) { return a.year - b.year; });
+
+        return salaryHistory;
+    }
+
+    function renderIBLChart(iblData) {
+        var ctx = document.getElementById('ibl-evolution-chart');
+        if (!ctx) {
+            console.error('Canvas element for IBL not found');
+            return;
+        }
+        
+        var labels = iblData.map(function(d) { return d.year; });
+        var values = iblData.map(function(d) { return d.ibl; });
+        
+        window.iblChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Salario Ajustado por Año',
+                    data: values,
+                    borderColor: 'rgba(17, 153, 142, 1)',
+                    backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: 'rgba(17, 153, 142, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: ['Evolución Salarial - Últimos 10 Años', '⚠️ VALORES ACTUALIZADOS POR INFLACIÓN (IPC) ⚠️'],
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#E65100',
+                        padding: {
+                            top: 10,
+                            bottom: 20
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = 'IBL: $' + formatNumber(context.parsed.y);
+                                
+                                // Calcular variación vs año anterior
+                                if (context.dataIndex > 0) {
+                                    var prevValue = context.dataset.data[context.dataIndex - 1];
+                                    var variation = ((context.parsed.y - prevValue) / prevValue * 100).toFixed(2);
+                                    var arrow = variation >= 0 ? '▲' : '▼';
+                                    var emoji = variation >= 0 ? '🟢' : '🔴';
+                                    label += '\n' + emoji + ' ' + arrow + ' ' + Math.abs(variation) + '% vs año anterior';
+                                }
+                                
+                                // Info adicional
+                                var dataPoint = iblData[context.dataIndex];
+                                label += '\nMeses incluidos: ' + dataPoint.meses;
+                                label += '\nPeríodos: ' + dataPoint.registros;
+                                
+                                return label.split('\n');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Años',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Salarios Actualizados',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            color: '#E65100'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + formatNumber(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function updateIBLStats(iblData) {
+        if (iblData.length === 0) return;
+        
+        var iblInicial = iblData[0].ibl;
+        var iblActual = iblData[iblData.length - 1].ibl;
+        var crecimientoTotal = ((iblActual - iblInicial) / iblInicial * 100);
+        var years = iblData.length - 1;
+        var crecimientoAnual = years > 0 ? crecimientoTotal / years : 0;
+        
+        document.getElementById('ibl-inicial').textContent = '$' + formatNumber(iblInicial);
+        document.getElementById('ibl-actual').textContent = '$' + formatNumber(iblActual);
+        
+        var crecimientoColor = crecimientoTotal >= 0 ? 'text-success' : 'text-danger';
+        var crecimientoArrow = crecimientoTotal >= 0 ? '▲' : '▼';
+        document.getElementById('ibl-crecimiento').innerHTML = 
+            '<span class="' + crecimientoColor + '">' + crecimientoArrow + ' ' + Math.abs(crecimientoTotal).toFixed(2) + '%</span>';
+        
+        var anualColor = crecimientoAnual >= 0 ? 'text-success' : 'text-danger';
+        var anualArrow = crecimientoAnual >= 0 ? '▲' : '▼';
+        document.getElementById('ibl-anual').innerHTML = 
+            '<span class="' + anualColor + '">' + anualArrow + ' ' + Math.abs(crecimientoAnual).toFixed(2) + '%</span>';
+    }
+    
+    function setupIBLDownloadButton() {
+        var btn = document.getElementById('download-ibl-chart-btn');
+        if (btn) {
+            btn.addEventListener('click', function() {
+                if (window.iblChart) {
+                    var url = window.iblChart.toBase64Image();
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'evolucion-ibl-' + new Date().getTime() + '.png';
+                    link.click();
+                }
+            });
+        }
+    }
+    
+    function formatNumber(num) {
+        return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+})();
+
+// Inicializar tooltips de Bootstrap para valores topeados
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<style>
+#ibl-evolution-section {
+    border: 1px solid #dee2e6;
+}
+
+#download-ibl-chart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.2s;
+}
+
+#ibl-evolution-section .card .border-info {
+    border-color: #17a2b8 !important;
+}
+
+#ibl-evolution-section .card .border-success {
+    border-color: #28a745 !important;
+}
+
+#ibl-evolution-section .card .border-warning {
+    border-color: #ffc107 !important;
+}
+
+#ibl-evolution-section .card .border-primary {
+    border-color: #007bff !important;
+}
+
+/* Estilos para el análisis del IBL */
+#ibl-analysis {
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: #28a745 !important;
+}
+
+.alert-warning {
+    border-left-color: #ffc107 !important;
+}
+
+.alert-danger {
+    border-left-color: #dc3545 !important;
+}
+
+#ibl-analysis ul {
+    padding-left: 20px;
+}
+
+#ibl-analysis li {
+    margin-bottom: 5px;
+}
+
+/* Estilos para valores topeados */
+.valor-topeado {
+    background-color: #fff3cd !important;
+    border-left: 3px solid #ffc107 !important;
+    font-weight: bold;
+    position: relative;
+    cursor: help;
+}
+
+.valor-topeado:hover {
+    background-color: #ffe69c !important;
+    transition: background-color 0.2s ease;
+}
+
+/* Estilo del icono de advertencia */
+.valor-topeado .fa-exclamation-triangle {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Tooltip personalizado */
+.tooltip-inner {
+    max-width: 300px;
+    text-align: left;
+    font-size: 0.9rem;
+}
+</style>

@@ -1,0 +1,18 @@
+<tr id="row-{{ pos }}">
+    <td><div class="form-group">
+            <label for="daterange">Meses</label>
+            <input type="number" min="1" name="pos[{{ pos }}][meses]" class="form-control" required />
+        </div></td>
+    <td><div class="form-group">
+            <label for="salario">Salario</label>
+            <input type="text"  name="pos[{{ pos }}][salario]" class="form-control salario">
+        </div></td>
+    <td>
+        {% if pos !=1 %}
+            <button class="btn btn-primary btn-sm delete-row" type="button" data-id="row-{{ pos }}">Quitar elemento</button>
+        {% endif %}
+    </td>
+    <td>
+        <div id="calculate-{{ pos }}"></div>
+    </td>
+</tr>

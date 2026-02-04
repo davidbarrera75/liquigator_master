@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Configuration{% endblock %}
+
+{% block body %}
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title">Editar</h4>
+            {{ include('configuration/_form.html.twig') }}
+            <a href="{{ path('configuration_index') }}">back to list</a>
+        </div>
+    </div>
+
+{% endblock %}

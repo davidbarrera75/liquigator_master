@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>REPORTE PRELIMINAR PENSIÓN - RÉGIMEN DE PRIMA MEDIA</title>
+    <link rel="shortcut icon" href="https://app.liquigator.digital/img/LIQUIGATOR_.png"
+          type="image/x-icon">
+
+    <style type="text/css">
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap');
+
+        @page {
+            margin: 0cm 0cm;
+        }
+
+        /** Define now the real margins of every page in the PDF **/
+        body {
+            margin-top: 2.54cm;
+            margin-left: 2.54cm;
+            margin-right: 2.54cm;
+            margin-bottom: 2.54cm;
+            font-size: small;
+
+        }
+
+        * {
+            font-family: 'Roboto', sans-serif;
+        }
+
+        table {
+            font-size: small;
+        }
+
+        tfoot tr td {
+            font-weight: bold;
+            font-size: small;
+        }
+
+        .gray {
+            background-color: lightgray
+        }
+
+        /** Define the header rules **/
+        header {
+            position: fixed;
+            top: 0cm;
+            left: 0cm;
+            right: 0cm;
+            /*height: 0cm;*/
+        }
+
+        header p {
+            left: 2.54cm !important;
+            margin-left: 2.54cm !important;
+            text-align: left;
+            color: #053665;
+            font-size: 12px !important;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 1cm;
+            left: 0cm;
+            right: 0cm;
+            height: 0cm;
+        }
+
+        .page_break {
+            page-break-before: always;
+        }
+
+        .page_initial {
+            text-align: center;
+            color: #053665;
+            font-size: 150%;
+        }
+
+        .page_info {
+            position: relative;
+            font-size: small;
+        }
+
+        .page_info ul {
+            /*position: absolute;*/
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            list-style: none;
+        }
+
+        .page_text, .page_text-ol {
+            position: relative;
+            font-size: x-large;
+        }
+
+        .page_text p {
+            position: absolute;
+            text-align: justify;
+            top: 40%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+        .page_text-ol p {
+            position: absolute;
+            text-align: justify;
+            top: 30%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+        .page_text-ol ol, .page_text-ol ul {
+            position: absolute;
+            text-align: justify;
+            top: 50%;
+            left: 0cm;
+            /*height: 30%;*/
+            width: 100%;
+            margin: -15% 0 0 0%;
+        }
+
+
+    </style>
+
+</head>
+<body>
+
+<main>
+
+    <div class="page_info">
+        <h3>INFORME PRELIMINAR</h3>
+        <ul>
+            <li><b>NOMBRE:</b> {{ info.fullName }}</li>
+            <li><b>CÉDULA:</b> {{ info.identification|number_format(0,',','.') }}</li>
+            <li><b>FECHA DE NACIMIENTO:</b> {{ info.birthdate|date('d/m/Y') }}</li>
+            <li><b>EDAD:</b> {{ info.edad }} AÑOS</li>
+            <li><b>AFILIADO(A) ACTUALMENTE EN:</b> {{ info.fondo|upper }}</li>
+            <li><b>SEMANAS COTIZADAS A {{ last_record|date('M/Y')|upper }}
+                    :</b> {{ info.totalWeeks|number_format(0,',','.') }}</li>
+        </ul>
+
+        <h4 style="text-align: center">REPORTE DETALLADO</h4>
+        {{ reporte|raw }}
+        <table width="100%">
+            <tr>
+                <td><h4>DETALLE</h4></td>
+            </tr>
+            <tr style="font-size: x-small">
+                <td width="50%" valign="top">
+
+                    <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                        <tr>
+                            <th>IBL</th>
+                            <td style="text-align: right">{{ info.resume['IBL']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center">{{ info.resume['R'] }}</td>
+                            <td style="text-align: right">{{ info.resume['R1']|raw }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <th style="text-align: center">{{ info.resume['X'] }}</th>
+                            <th style="text-align: right">{{ info.resume['R2']|raw }}</th>
+                        </tr>
+                    </table>
+                </td>
+                <td width="50%" valign="top">
+                    <table width="100%" border="0.5" cellspacing="0" cellpadding="5">
+                        <tr>
+                            <th style="text-align: center">S</th>
+                            <td style="text-align: right">{{ info.resume['S'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>S.M.M.L.V</th>
+                            <td style="text-align: right">{{ smmlv|number_format(0) }}</td>
+                        </tr>
+                    </table>
+                    <br>
+                    <table width="100%" border="0.1" cellspacing="0" cellpadding="5">
+                        <tr>
+                            <th>% BÁSICO</th>
+                            <th>% ADICIONAL</th>
+
+                        </tr>
+                        <tr>
+                            <td>r=65,5%-(s*0,5%)</td>
+                            <td>{{ info.totalWeeks|round(2) }} <small>Semanas</small></td>
+                        </tr>
+                        <tr>
+                            <td>65,50%</td>
+                            <td>1300 <small>Básicas</small></td>
+                        </tr>
+                        <tr>
+                            <td>{{ info.resume['Porcentaje Adicional'] }}</td>
+                            <td>{{ info.resume['Semanas Adicionales'] }} <small>Adicionales</small>
+                            </td>
+
+                        </tr>
+                        <tr>
+                            <td>{{ info.resume['IBL']|raw }}</td>
+                            <td>1.5%</td>
+                        </tr>
+                        <tr style="background-color: lightgray">
+                            <th>SUMA</th>
+                            <td>{{ info.resume['X'] }}</td>
+                        </tr>
+                    </table>
+
+                </td>
+            </tr>
+        </table>
+        <h4>Conclusiones</h4>
+        <div style="text-align: justify">{{ info.conclusiones|raw }}</div>
+
+    </div>
+</main>
+
+</body>
+</html>
