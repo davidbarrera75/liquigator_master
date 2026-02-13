@@ -140,8 +140,8 @@ class IpcService
             'semanas' => $semanas,
             'genero' => $genero === 'F' ? 'Femenino' : 'Masculino',
             'anio' => $anio,
-            'sentencia' => $genero === 'F' && $anio >= 2025 ? 'Sentencia C-197 de 2023' : null,
-            'nota' => $genero === 'F' && $anio >= 2025
+            'sentencia' => $genero === 'F' && $anio >= 2026 ? 'Sentencia C-197 de 2023' : null,
+            'nota' => $genero === 'F' && $anio >= 2026
                 ? "Según Sentencia C-197 de 2023, las mujeres requieren {$semanas} semanas en {$anio}"
                 : null
         ];

@@ -576,14 +576,15 @@ class MainController extends AbstractController
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
         $data_completo = $em->getRepository(Data::class)->getInfoListed($info->getId(), $info->getCotizacionAnio());
         $table = $this->infoLiquidacion($data_completo, $info->getCotizacionAnio());
-        // Sentencia C-197 de 2023: semanas según género
-        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
-        $salario = $this->ipcService->salarioMinimo($this->year);
+        // Sentencia C-197 de 2023: semanas según género (usar año de cotización, no año actual)
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
+        $salario = $this->ipcService->salarioMinimo($anioCotizacion);
         $last = $em->getRepository(Data::class)->getLast($info);
         $after = DateTime::createFromFormat('Y-m', $last->getPeriod());
         $after->modify('+1 month');
         $ad['Semanas Básicas'] = $semanas;
-        $ad['Sentencia C-197'] = $info->isMujer() ? 'Sí' : 'No';
+        $ad['Sentencia C-197'] = ($info->isMujer() && $anioCotizacion >= 2026) ? 'Aplica' : 'No aplica';
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;
         if ($info->getTotalWeeks() > $semanas) {
@@ -725,8 +726,9 @@ class MainController extends AbstractController
             return $this->redirectToRoute('crearInforme');
         }
 
-        // Sentencia C-197 de 2023: semanas según género
-        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
+        // Sentencia C-197 de 2023: semanas según género (usar año de cotización, no año actual)
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
 
         $v = $this->verifyUser($info->getUser());
         if ($v) return $v;
@@ -744,7 +746,7 @@ class MainController extends AbstractController
         $after = DateTime::createFromFormat('Y-m', $last->getPeriod());
         $after->modify('+1 month');
         $ad['Semanas Básicas'] = $semanas;
-        $ad['Sentencia C-197'] = $info->isMujer() ? 'Aplica' : 'No aplica';
+        $ad['Sentencia C-197'] = ($info->isMujer() && $anioCotizacion >= 2026) ? 'Aplica' : 'No aplica';
         $ad['Días Calculados'] = $info->getTotalDays();
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;
@@ -852,7 +854,7 @@ class MainController extends AbstractController
             $em->persist($info);
             $em->flush();
 
-            $semanasExigidas = $this->ipcService->semanasExigidas($genero, (int)$this->year);
+            $semanasExigidas = $this->ipcService->semanasExigidas($genero, (int)$info->getCotizacionAnio());
             $this->addFlash('success', 'Género actualizado. Semanas exigidas: ' . $semanasExigidas);
         } else {
             $this->addFlash('error', 'Género no válido');
@@ -1110,10 +1112,11 @@ class MainController extends AbstractController
         $req = $request->request->all();
         $ipc = $em->getRepository(Ipc::class)->max();
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $req['client']]);
-        // Sentencia C-197 de 2023: semanas según género
-        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
+        // Sentencia C-197 de 2023: semanas según género (usar año de cotización)
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
         $data = [];
-        $salario = $this->ipcService->salarioMinimo($this->year);
+        $salario = $this->ipcService->salarioMinimo($anioCotizacion);
         $arr = [];
         $total_meses_proyeccion = 0;
 
@@ -1587,12 +1590,13 @@ class MainController extends AbstractController
             }
         }
 
-        // Obtener datos de liquidación - Sentencia C-197 de 2023
-        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), (int)$this->year);
+        // Obtener datos de liquidación - Sentencia C-197 de 2023 (usar año de cotización)
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
         $ad = [];
         $ad['Semanas Básicas'] = $semanas;
         $ad['Género'] = $info->getGeneroTexto();
-        $ad['Sentencia C-197'] = $info->isMujer() ? 'Aplica' : 'No aplica';
+        $ad['Sentencia C-197'] = ($info->isMujer() && $anioCotizacion >= 2026) ? 'Aplica' : 'No aplica';
         $ad['Días Calculados'] = $info->getTotalDays();
         $ad['Semanas Adicionales'] = 0;
         $ad['Porcentaje Adicional'] = 0;
