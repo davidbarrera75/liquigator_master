@@ -113,6 +113,12 @@ class MainController extends AbstractController
      */
     public function datos(Request $request)
     {
+        // Validar que hay sesión activa antes de crear registros
+        if (!$this->getUser()) {
+            $this->addFlash('warning', 'Por seguridad, su sesión se cerró automáticamente. Solo debe iniciar sesión de nuevo y podrá continuar sin problema.');
+            return $this->redirectToRoute('app_login');
+        }
+
         $em = $this->getDoctrine()->getManager();
 
         // Log para debugging
@@ -144,7 +150,7 @@ class MainController extends AbstractController
 
         if (!$file) {
             $this->logger->error("No se recibió ningún archivo en el request");
-            $this->addFlash('error', 'Por favor seleccione un archivo PDF o Excel para procesar.');
+            $this->addFlash('warning', 'No se detectó ningún archivo. Por favor seleccione un PDF o Excel e intente de nuevo.');
             return $this->redirectToRoute('crearInforme');
         }
 
@@ -237,7 +243,7 @@ class MainController extends AbstractController
                 'file' => $uploaded ?? 'unknown',
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->addFlash('error', 'Error al procesar el archivo: ' . $e->getMessage());
+            $this->addFlash('warning', 'No fue posible procesar el archivo en este momento. Por favor intente de nuevo. Si el problema persiste, verifique que el PDF no esté protegido con contraseña.');
             return $this->redirectToRoute('crearInforme');
         }
 
@@ -295,7 +301,7 @@ class MainController extends AbstractController
                 ->execute();
             return $extract;
         } catch (Exception $e2) {
-            $this->addFlash('error', 'Todos los métodos de extracción fallaron: ' . $e2->getMessage());
+            $this->addFlash('warning', 'No fue posible leer los datos del PDF. Esto puede ocurrir si el archivo está protegido o tiene un formato diferente al esperado. Por favor intente con otro archivo.');
             throw new Exception($e2->getMessage());
         }
     }
@@ -715,7 +721,8 @@ class MainController extends AbstractController
 
         // Validación: verificar que tiene usuario asignado
         if (!$info->getUser()) {
-            throw new \RuntimeException('Este informe no tiene usuario asignado (registro inconsistente). Por favor, vuelva a cargar el PDF.');
+            $this->addFlash('warning', 'Este informe necesita ser generado nuevamente. No se preocupe, solo cargue el PDF de nuevo y quedará listo.');
+            return $this->redirectToRoute('crearInforme');
         }
 
         // Sentencia C-197 de 2023: semanas según género
@@ -730,7 +737,7 @@ class MainController extends AbstractController
         $last = $em->getRepository(Data::class)->getLast($info);
 
         if ($last === null) {
-            $this->addFlash('error', 'No se encontraron datos de cotización para este registro. El PDF puede no haberse procesado correctamente. Por favor, vuelva a cargar el archivo.');
+            $this->addFlash('warning', 'No se encontraron datos de cotización en este informe. No se preocupe, solo cargue el PDF nuevamente y quedará listo.');
             return $this->redirectToRoute('crearInforme');
         }
 
@@ -784,14 +791,14 @@ class MainController extends AbstractController
 
         // Verificar si hay un usuario logueado
         if (!$currentUser) {
-            $this->addFlash('error', 'Debe iniciar sesión para acceder a este recurso');
+            $this->addFlash('warning', 'Por seguridad, su sesión se cerró automáticamente. Inicie sesión de nuevo para continuar.');
             $r = $this->redirectToRoute('app_login');
             return $r;
         }
 
         // Verificar si el usuario logueado tiene permiso
         if ($user->getUsername() !== $currentUser->getUsername()) {
-            $this->addFlash('error', 'No tiene permiso para acceder a este elemento');
+            $this->addFlash('warning', 'Este informe pertenece a otro usuario. Si cree que es un error, por favor contacte al administrador.');
             $r = $this->redirectToRoute('main');
         }
         return $r;
@@ -810,7 +817,7 @@ class MainController extends AbstractController
             $em->flush();
             $this->addFlash('success', 'Semanas Actualizadas');
         } else {
-            $this->addFlash('error', 'No se puede actualizar las semanas ya que el valor no es numèrico');
+            $this->addFlash('warning', 'El valor de semanas debe ser un número. Por favor verifique e intente de nuevo.');
         }
 
 
