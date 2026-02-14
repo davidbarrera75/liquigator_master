@@ -55,6 +55,12 @@ services:
       $projectDir: '%kernel.project_dir%'
       $ipcService: '@App\Service\IpcService'
 
+  App\Service\CrmService:
+    arguments:
+      $crmApiUrl: '%env(CRM_API_URL)%'
+      $crmApiToken: '%env(CRM_API_TOKEN)%'
+      $crmEnabled: '%env(bool:CRM_ENABLED)%'
+
   App\Controller\MainController:
     arguments:
       $projectDir: '%kernel.project_dir%'

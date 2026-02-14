@@ -13,6 +13,7 @@ use App\Service\FileUploader;
 use App\Service\IpcService;
 use App\Service\ClaudeService;
 use App\Service\PdfPlumberService;
+use App\Service\CrmService;
 use App\Service\GotenbergService;
 use DateInterval;
 use DatePeriod;
@@ -48,7 +49,7 @@ class MainController extends AbstractController
     const VARIACION_TAZA = 'VariacionTaza';
     const ADICIONAL = 'SemanasAdicionales';
     const FONDOS = 'Fondos';
-    private $uploader, $ipcService, $logger, $extractService, $claudeService, $pdfPlumberService, $gotenbergService;
+    private $uploader, $ipcService, $logger, $extractService, $claudeService, $pdfPlumberService, $gotenbergService, $crmService;
     /**
      * @var false|string
      */
@@ -63,6 +64,7 @@ class MainController extends AbstractController
         ClaudeService $claudeService,
         PdfPlumberService $pdfPlumberService,
         \App\Service\GotenbergService $gotenbergService,
+        CrmService $crmService,
         string $projectDir
     )
     {
@@ -73,6 +75,7 @@ class MainController extends AbstractController
         $this->claudeService = $claudeService;
         $this->pdfPlumberService = $pdfPlumberService;
         $this->gotenbergService = $gotenbergService;
+        $this->crmService = $crmService;
         $this->projectDir = $projectDir;
         $this->year = date('Y');
     }
@@ -234,6 +237,10 @@ class MainController extends AbstractController
             $em->persist($info);
             $em->flush();
             $em->getConnection()->commit();
+
+            // Enviar datos al CRM (no bloquea si falla)
+            $this->crmService->enviarInforme($info);
+
             return $this->redirectToRoute('client', ['uniqid' => $info->getUniqId()]);
 
         } catch (Exception $e) {
