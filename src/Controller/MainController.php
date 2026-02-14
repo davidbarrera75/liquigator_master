@@ -294,7 +294,7 @@ class MainController extends AbstractController
             $claudeData = $this->claudeService->extractPdfData($webPath, $fondo);
             return $this->transformClaudeResponse($claudeData, $fondo);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->warning("Claude falló: " . $e->getMessage());
         }
 
