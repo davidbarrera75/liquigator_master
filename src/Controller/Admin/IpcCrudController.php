@@ -26,7 +26,7 @@ class IpcCrudController extends AbstractCrudController
     {
         return [
             NumberField::new('anio','Año'),
-            NumberField::new('porcentaje','Porcentaje'),
+            NumberField::new('porcentaje','Porcentaje')->setNumDecimals(4),
             NumberField::new('ipc','IPC')->onlyOnIndex(),
 
         ];
