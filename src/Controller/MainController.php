@@ -1304,13 +1304,27 @@ class MainController extends AbstractController
     {
         $data = $request->request->all();
         $pk = $data['pk'];
-        $value = $data['value'];
+        $nuevosDias = (int)$data['value'];
         $em = $this->getDoctrine()->getManager();
         $dataEntity = $em->getRepository(Data::class)->find($pk);
-        $dataEntity->setDaysPeriod($value);
+
+        $diasActuales = $dataEntity->getDaysPeriod();
+        $valorActual = $dataEntity->getVal();
+
+        // Recalcular valor proporcionalmente a los días cotizados
+        if ($diasActuales > 0 && $nuevosDias > 0) {
+            $nuevoValor = round(($valorActual / $diasActuales) * $nuevosDias, 2);
+            $dataEntity->setVal($nuevoValor);
+        }
+
+        $dataEntity->setDaysPeriod($nuevosDias);
         $em->persist($dataEntity);
         $em->flush();
-        return new JsonResponse(['message' => 'Dias actualizados'], Response::HTTP_OK);
+
+        return new JsonResponse([
+            'message' => 'Dias y valor actualizados',
+            'nuevoValor' => $dataEntity->getVal()
+        ], Response::HTTP_OK);
     }
 
     /**

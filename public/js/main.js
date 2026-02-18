@@ -230,12 +230,20 @@ var RESUME_MENSUAL = {
                     var d = new $.Deferred();
                     var url = $(this).data('url');
                     var pk = $(this).data('pk');
+                    var $editableElement = $(this);
                     $.ajax({
                         url: url,
                         type: 'POST',
                         data: {pk: pk, value: params.value},
                         success: function(response) {
                             console.log('Días actualizado', response);
+                            // Actualizar la celda de valor en la misma fila
+                            if (response.nuevoValor !== undefined) {
+                                var $row = $editableElement.closest('tr');
+                                var $valorCell = $row.find('.valor-reporte-mensual');
+                                $valorCell.text(response.nuevoValor);
+                                $valorCell.data('value', response.nuevoValor);
+                            }
                             d.resolve(response);
                         },
                         error: function(xhr, status, error) {
