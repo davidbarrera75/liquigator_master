@@ -1105,6 +1105,16 @@ class MainController extends AbstractController
     {
         if ($v = $this->verifyUser($PDFReport->getInformation()->getUser())) return $v;
         $response = new BinaryFileResponse($PDFReport->getFullPath());
+        // Detectar Content-Type según extensión del archivo
+        $ext = strtolower(pathinfo($PDFReport->getName(), PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'pdf' => 'application/pdf',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+        if (isset($mimeTypes[$ext])) {
+            $response->headers->set('Content-Type', $mimeTypes[$ext]);
+        }
         $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $PDFReport->getName());
         return $response;
     }
