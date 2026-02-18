@@ -1673,9 +1673,7 @@ class MainController extends AbstractController
         // Normalizar saltos de línea
         $text = str_replace("\r\n", "\n", $text);
         $text = str_replace("\r", "\n", $text);
-        // Convertir \n a salto de línea suave (soft return / vertical tab)
-        // PHPWord maneja esto correctamente
-        $text = str_replace("\n", "\v", $text);
+        // PHPWord convierte \n a <w:br/> en el XML de Word
         return $text;
     }
 
@@ -1736,8 +1734,8 @@ class MainController extends AbstractController
             if ($width < 10) $width = 10; // Ancho mínimo
         }
 
-        // Usar salto de línea suave (soft return) que Word entiende
-        $lineBreak = "\v";
+        // PHPWord convierte \n a <w:br/> en el XML de Word
+        $lineBreak = "\n";
 
         // Construir encabezados
         if (!empty($headers)) {
