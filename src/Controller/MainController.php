@@ -1673,7 +1673,10 @@ class MainController extends AbstractController
         // Normalizar saltos de línea
         $text = str_replace("\r\n", "\n", $text);
         $text = str_replace("\r", "\n", $text);
-        // PHPWord convierte \n a <w:br/> en el XML de Word
+        // Escapar caracteres especiales XML
+        $text = htmlspecialchars($text, ENT_XML1, 'UTF-8');
+        // Convertir \n a salto de línea Word XML (PHPWord 0.18 no lo hace automáticamente)
+        $text = str_replace("\n", '</w:t><w:br/><w:t xml:space="preserve">', $text);
         return $text;
     }
 
@@ -1734,8 +1737,8 @@ class MainController extends AbstractController
             if ($width < 10) $width = 10; // Ancho mínimo
         }
 
-        // PHPWord convierte \n a <w:br/> en el XML de Word
-        $lineBreak = "\n";
+        // Salto de línea Word XML (PHPWord 0.18 no convierte \n automáticamente)
+        $br = '</w:t><w:br/><w:t xml:space="preserve">';
 
         // Construir encabezados
         if (!empty($headers)) {
@@ -1743,22 +1746,24 @@ class MainController extends AbstractController
                 $width = $columnWidths[$index];
                 $textTable .= str_pad(substr($header, 0, $width), $width) . ' | ';
             }
-            $textTable = rtrim($textTable) . $lineBreak;
+            $textTable = rtrim($textTable) . $br;
 
             // Línea separadora
             foreach ($columnWidths as $width) {
                 $textTable .= str_repeat('-', $width) . '-+-';
             }
-            $textTable = rtrim($textTable, '-+') . $lineBreak;
+            $textTable = rtrim($textTable, '-+') . $br;
         }
 
         // Construir filas de datos
         foreach ($allRows as $cells) {
             foreach ($cells as $index => $cell) {
                 $width = isset($columnWidths[$index]) ? $columnWidths[$index] : 20;
-                $textTable .= str_pad(substr($cell, 0, $width), $width) . ' | ';
+                // Escapar caracteres especiales XML en el contenido de celdas
+                $escapedCell = htmlspecialchars($cell, ENT_XML1, 'UTF-8');
+                $textTable .= str_pad(substr($escapedCell, 0, $width), $width) . ' | ';
             }
-            $textTable = rtrim($textTable) . $lineBreak;
+            $textTable = rtrim($textTable) . $br;
         }
 
         // Procesar footer si existe
@@ -1770,7 +1775,7 @@ class MainController extends AbstractController
                 foreach ($columnWidths as $width) {
                     $textTable .= str_repeat('=', $width) . '=+=';
                 }
-                $textTable = rtrim($textTable, '=+') . $lineBreak;
+                $textTable = rtrim($textTable, '=+') . $br;
 
                 $ths = $footerRow->getElementsByTagName('th');
                 foreach ($ths as $index => $th) {
@@ -1778,7 +1783,7 @@ class MainController extends AbstractController
                     $width = isset($columnWidths[$index]) ? $columnWidths[$index] : 20;
                     $textTable .= str_pad(substr($text, 0, $width), $width) . ' | ';
                 }
-                $textTable = rtrim($textTable) . $lineBreak;
+                $textTable = rtrim($textTable) . $br;
             }
         }
 
