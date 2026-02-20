@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Resumen Semanas Cotizadas{% endblock %}
+{% block id %}resumen-semanas{% endblock %}
+{% block body %}
+    {% include 'main/client/head.html.twig' with {'info':info} %}
+
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Resumen de Semanas Cotizadas</h4>
+            <p class="mb-0"><small>Detalle de semanas cotizadas por empleador - Colpensiones</small></p>
+        </div>
+        <div class="card-body">
+            {% if info.resumenSemanas|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre / Razón Social</th>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th class="text-end">Último Salario</th>
+                            <th class="text-end">Semanas</th>
+                            <th class="text-end">SIM</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% set totalSemanas = 0 %}
+                        {% set totalSim = 0 %}
+                        {% set totalTotal = 0 %}
+                        {% for resumen in info.resumenSemanas %}
+                            {% set totalSemanas = totalSemanas + resumen.semanas|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
+                            {% set totalSim = totalSim + resumen.sim|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
+                            {% set totalTotal = totalTotal + resumen.total|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ resumen.nombreRazonSocial }}</td>
+                                <td>{{ resumen.desde }}</td>
+                                <td>{{ resumen.hasta }}</td>
+                                <td class="text-end">{{ resumen.ultimoSalario }}</td>
+                                <td class="text-end">{{ resumen.semanas }}</td>
+                                <td class="text-end">{{ resumen.sim }}</td>
+                                <td class="text-end">{{ resumen.total }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot>
+                        <tr class="table-success fw-bold">
+                            <td colspan="5" class="text-end">TOTALES:</td>
+                            <td class="text-end">{{ totalSemanas|number_format(2, ',', '.') }}</td>
+                            <td class="text-end">{{ totalSim|number_format(2, ',', '.') }}</td>
+                            <td class="text-end">{{ totalTotal|number_format(2, ',', '.') }}</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <strong>Total de empleadores:</strong> {{ info.resumenSemanas|length }}
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <strong>Sin datos de resumen.</strong> Este informe no tiene datos de resumen de semanas cotizadas.
+                    Esto puede ocurrir si el PDF no es de Colpensiones o si la sección de resumen no fue encontrada en el documento.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

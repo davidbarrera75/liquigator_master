@@ -65,6 +65,11 @@
                             <i class="align-middle" data-feather="database"></i> <span class="align-middle">Valores Extraídos</span>
                         </a>
                     </li>
+                    <li class="sidebar-item {% if app.request.requestUri == path('resumen-semanas',{'uniqid': info.uniqid}) %}active{% endif %}">
+                        <a class="sidebar-link" href="{{ path('resumen-semanas',{'uniqid': info.uniqid}) }}">
+                            <i class="align-middle" data-feather="briefcase"></i> <span class="align-middle">Resumen Semanas Cotizadas</span>
+                        </a>
+                    </li>
 
                 {% endif %}
                 <li class="sidebar-header">

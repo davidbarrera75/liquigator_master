@@ -156,6 +156,11 @@ class PdfPlumberService
             $response['days_array'] = $days_array;
         }
 
+        // Pasar resumen de semanas cotizadas (Colpensiones)
+        if (isset($result['resumen_semanas']) && !empty($result['resumen_semanas'])) {
+            $response['resumen_semanas'] = $result['resumen_semanas'];
+        }
+
         return $response;
     }
 

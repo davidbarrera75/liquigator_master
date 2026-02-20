@@ -362,6 +362,73 @@ def extraer_colpensiones(pdf_path: str):
 
 
 # ============================================================================
+# COLPENSIONES - Resumen de Semanas Cotizadas (tabla de empleadores)
+# ============================================================================
+def extraer_colpensiones_resumen(pdf_path: str):
+    """Extrae la tabla de resumen de semanas cotizadas por empleador.
+
+    Diferencia entre RESUMEN y DETALLE DE PAGOS:
+    - RESUMEN: [ID] [Nombre] [Desde: DD/MM/YYYY] [Hasta: DD/MM/YYYY] [Salario: $X] [Semanas: 27,71] [Lic] [Sim] [Total]
+    - DETALLE: [ID] [Nombre] [RA: SI/NO] [Período: YYYYMM] [Fecha] [Ref] [IBC] [Cotización] [Mora] [Nov] [Días] [Días] [Obs]
+
+    La clave para diferenciar: en el RESUMEN, columna[2] (Desde) tiene formato DD/MM/YYYY
+    y columna[5] (Semanas) es un número decimal.
+    """
+    datos = []
+    # Regex para validar fecha DD/MM/YYYY en columna Desde
+    re_fecha = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+    # Regex para validar número decimal en columna Semanas (ej: 27,71 o 0,00)
+    re_decimal = re.compile(r'^\d+[.,]\d+$')
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            tablas = page.extract_tables()
+            if not tablas:
+                continue
+
+            for tabla in tablas:
+                for fila in tabla:
+                    if not fila or len(fila) < 9:
+                        continue
+
+                    # Ignorar filas de encabezado
+                    if fila[0] and ('[1]' in str(fila[0]) or 'Identificación' in str(fila[0])):
+                        continue
+
+                    # Verificar que sea una fila de datos (primer campo numérico)
+                    id_aportante = str(fila[0]).strip() if fila[0] else ""
+                    if not (id_aportante and id_aportante.replace(" ", "").isdigit()):
+                        continue
+
+                    # Validar que es del RESUMEN y no del DETALLE:
+                    # - Columna 2 (Desde) debe ser fecha DD/MM/YYYY
+                    # - Columna 5 (Semanas) debe ser número decimal
+                    desde = str(fila[2]).strip() if fila[2] else ""
+                    semanas_val = str(fila[5]).strip() if fila[5] else ""
+
+                    if not re_fecha.match(desde):
+                        continue
+                    if not re_decimal.match(semanas_val):
+                        continue
+
+                    try:
+                        registro = {
+                            "nombre_razon_social": str(fila[1]).strip() if fila[1] else "",
+                            "desde": desde,
+                            "hasta": str(fila[3]).strip() if fila[3] else "",
+                            "ultimo_salario": str(fila[4]).strip() if fila[4] else "",
+                            "semanas": semanas_val,
+                            "sim": str(fila[7]).strip() if fila[7] else "0",
+                            "total": str(fila[8]).strip() if fila[8] else "0"
+                        }
+                        datos.append(registro)
+                    except (IndexError, TypeError):
+                        continue
+
+    return datos
+
+
+# ============================================================================
 # FUNCIÓN PRINCIPAL
 # ============================================================================
 def extraer_pdf(pdf_path: str, fondo: str):
@@ -406,7 +473,7 @@ def extraer_pdf(pdf_path: str, fondo: str):
         VALOR_MES = 360 / 7 / 12  # 4.285714
         total_semanas = len(data) * VALOR_MES
 
-        return {
+        result = {
             "success": True,
             "fondo": fondo,
             "total_rows": len(data),
@@ -414,6 +481,17 @@ def extraer_pdf(pdf_path: str, fondo: str):
             "data": data,
             "extracted_at": datetime.now().isoformat()
         }
+
+        # Para Colpensiones, extraer también el resumen de semanas cotizadas
+        if fondo == "colpensiones":
+            try:
+                resumen = extraer_colpensiones_resumen(pdf_path)
+                if resumen:
+                    result["resumen_semanas"] = resumen
+            except Exception:
+                pass  # No fallar si el resumen no se puede extraer
+
+        return result
 
     except FileNotFoundError:
         return {

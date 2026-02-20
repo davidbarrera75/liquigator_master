@@ -7,6 +7,7 @@ use App\Entity\Information;
 use App\Entity\Ipc;
 use App\Entity\PDFReport;
 use App\Entity\Proyeccion;
+use App\Entity\ResumenSemanas;
 use App\Entity\User;
 use App\Service\ExtractService;
 use App\Service\FileUploader;
@@ -235,6 +236,23 @@ class MainController extends AbstractController
             $info->setTotalDays($extract['dias'] ?? 0);
             $info->setCotizacionAnio($flag);
             $em->persist($info);
+
+            // Guardar resumen de semanas cotizadas (Colpensiones)
+            if (isset($extract['resumen_semanas']) && is_array($extract['resumen_semanas'])) {
+                foreach ($extract['resumen_semanas'] as $resumenRow) {
+                    $resumen = new ResumenSemanas();
+                    $resumen->setNombreRazonSocial($resumenRow['nombre_razon_social'] ?? '');
+                    $resumen->setDesde($resumenRow['desde'] ?? '');
+                    $resumen->setHasta($resumenRow['hasta'] ?? '');
+                    $resumen->setUltimoSalario($resumenRow['ultimo_salario'] ?? '');
+                    $resumen->setSemanas($resumenRow['semanas'] ?? '0');
+                    $resumen->setSim($resumenRow['sim'] ?? '0');
+                    $resumen->setTotal($resumenRow['total'] ?? '0');
+                    $resumen->setInfo($info);
+                    $em->persist($resumen);
+                }
+            }
+
             $em->flush();
             $em->getConnection()->commit();
 
@@ -557,6 +575,20 @@ class MainController extends AbstractController
         return $this->render('main/client/valores-extraidos.html.twig', [
                 'info' => $info,
                 'topes' => $topesArray,
+            ]
+        );
+    }
+
+    /**
+     * @Route ("/{uniqid}/resumen-semanas", name="resumen-semanas")
+     */
+    public function resumenSemanas(Request $request)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
+
+        return $this->render('main/client/resumen-semanas.html.twig', [
+                'info' => $info,
             ]
         );
     }

@@ -6,7 +6,10 @@ COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr
 
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git
+    apt-get install -y git python3 python3-pip
+
+# Install pdfplumber for PDF extraction
+RUN pip3 install pdfplumber --break-system-packages
 
 # Install needed php extensions
 RUN install-php-extensions \

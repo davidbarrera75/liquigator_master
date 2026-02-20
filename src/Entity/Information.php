@@ -107,11 +107,17 @@ class Information
      */
     private $genero = 'M';
 
+    /**
+     * @ORM\OneToMany(targetEntity=ResumenSemanas::class, mappedBy="info")
+     */
+    private $resumenSemanas;
+
     public function __construct()
     {
         $this->data = new ArrayCollection();
         $this->PDFReports = new ArrayCollection();
         $this->proyecciones = new ArrayCollection();
+        $this->resumenSemanas = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -395,5 +401,34 @@ class Information
     public function getGeneroTexto(): string
     {
         return $this->genero === 'F' ? 'Femenino' : 'Masculino';
+    }
+
+    /**
+     * @return Collection|ResumenSemanas[]
+     */
+    public function getResumenSemanas(): Collection
+    {
+        return $this->resumenSemanas;
+    }
+
+    public function addResumenSemanas(ResumenSemanas $resumenSemanas): self
+    {
+        if (!$this->resumenSemanas->contains($resumenSemanas)) {
+            $this->resumenSemanas[] = $resumenSemanas;
+            $resumenSemanas->setInfo($this);
+        }
+
+        return $this;
+    }
+
+    public function removeResumenSemanas(ResumenSemanas $resumenSemanas): self
+    {
+        if ($this->resumenSemanas->removeElement($resumenSemanas)) {
+            if ($resumenSemanas->getInfo() === $this) {
+                $resumenSemanas->setInfo(null);
+            }
+        }
+
+        return $this;
     }
 }
