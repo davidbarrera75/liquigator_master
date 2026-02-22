@@ -1,11 +1,12 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}Resumen Semanas Cotizadas{% endblock %}
-{% block id %}resumen-semanas{% endblock %}
+{% block id %}client{% endblock %}
 {% block body %}
-    {% include 'main/client/head.html.twig' with {'info':info} %}
+    {% include 'main/client/head.html.twig' with {'info':info,'new_title':'RESUMEN SEMANAS COTIZADAS'} %}
 
-    <div class="card">
+    {# 1. Tabla de empleadores (Colpensiones) #}
+    <div class="card mb-4">
         <div class="card-header bg-success text-white">
             <h4 class="mb-0">Resumen de Semanas Cotizadas</h4>
             <p class="mb-0"><small>Detalle de semanas cotizadas por empleador - Colpensiones</small></p>
@@ -27,10 +28,13 @@
                         </tr>
                         </thead>
                         <tbody>
+                        {% set totalSalario = 0 %}
                         {% set totalSemanas = 0 %}
                         {% set totalSim = 0 %}
                         {% set totalTotal = 0 %}
                         {% for resumen in info.resumenSemanas %}
+                            {% set salarioLimpio = resumen.ultimoSalario|default('0')|replace({'$': '', '.': '', ',': '.', ' ': ''}) %}
+                            {% set totalSalario = totalSalario + salarioLimpio %}
                             {% set totalSemanas = totalSemanas + resumen.semanas|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
                             {% set totalSim = totalSim + resumen.sim|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
                             {% set totalTotal = totalTotal + resumen.total|default('0')|replace({',': '.'})|number_format(2, '.', '') %}
@@ -48,7 +52,8 @@
                         </tbody>
                         <tfoot>
                         <tr class="table-success fw-bold">
-                            <td colspan="5" class="text-end">TOTALES:</td>
+                            <td colspan="4" class="text-end">TOTALES:</td>
+                            <td class="text-end">${{ totalSalario|number_format(0, ',', '.') }}</td>
                             <td class="text-end">{{ totalSemanas|number_format(2, ',', '.') }}</td>
                             <td class="text-end">{{ totalSim|number_format(2, ',', '.') }}</td>
                             <td class="text-end">{{ totalTotal|number_format(2, ',', '.') }}</td>
@@ -67,4 +72,259 @@
             {% endif %}
         </div>
     </div>
+
+    {# 2. Gráfica de semanas cotizadas por empleador #}
+    {% if info.resumenSemanas|length > 0 %}
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Semanas Pagadas por Empleador</h5>
+        </div>
+        <div class="card-body">
+            <div style="position: relative; height: 400px;">
+                <canvas id="semanas-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# 3. Tabla de liquidación #}
+    <div class="card col-12">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="fas fa-calculator"></i> Datos de Liquidación</h5>
+            <table class="table table-sm">
+                <tr>
+                    <th>Liquidación al año</th>
+                    <td class="text-end">
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#liquidacionalanio">
+                            {{ info.cotizacionAnio }}
+                        </a>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Total Semanas</th>
+                    <td class="text-end"><a href="#" data-bs-toggle="modal"
+                                            data-bs-target="#totalsemanas">{{ info.totalWeeks }}</a></td>
+                </tr>
+                <tr>
+                    <th>Género</th>
+                    <td class="text-end">{{ info.generoTexto }}</td>
+                </tr>
+                <tr>
+                    <th>Semanas Exigidas</th>
+                    <td class="text-end">
+                        {{ ad['Semanas Básicas'] }}
+                        {% if info.isMujer %}
+                        <br><small class="text-info"><i class="fas fa-balance-scale"></i> Sentencia C-197/2023</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Semanas Adicionales</th>
+                    <td class="text-end">{{ ad['Semanas Adicionales'] }}</td>
+                </tr>
+                <tr>
+                    <th>Porcentaje Adicional</th>
+                    <td class="text-end">{{ ad['Porcentaje Adicional'] }}</td>
+                </tr>
+                <tr>
+                    <th>IBL</th>
+                    <td class="text-end">{{ ad['IBL']|raw }}</td>
+                </tr>
+                <tr>
+                    <th>s</th>
+                    <td class="text-end">{{ ad['S'] }}</td>
+                </tr>
+                <tr>
+                    <th>r</th>
+                    <td class="text-end">{{ ad['R'] }}</td>
+                </tr>
+                <tr>
+                    <th>Total Porcentaje</th>
+                    <td class="text-end">{{ ad['X'] }}</td>
+                </tr>
+                <tr>
+                    <th>Pensión Básica</th>
+                    <td class="text-end">{{ ad['R1']|raw }}</td>
+                </tr>
+                <tr>
+                    <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
+                    <td class="text-end">{{ ad['R2']|raw }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    {# 4. Comentarios y Generar Reporte #}
+    <div class="card col-12 mt-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <form class="card border-primary" action="{{ path('report_pdf',{'id':info.id}) }}" method="post">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="conclusiones">Conclusiones</label>
+                                <textarea class="form-control col-12" name="conclusiones"
+                                          id="conclusiones">{{ info.conclusiones }}</textarea>
+                            </div>
+                            <button class="btn btn-dark btn-sm float-end" type="button" id="save-comment"
+                                    data-url="{{ path('cliente_comentario',{'id':info.id}) }}">
+                                <small>Guardar Comentario</small>
+                            </button>
+                            <i class="text-success" id="comment-save-success"></i>
+                            <div class="form-group mt-4">
+                                <label class="font-weight-bold">Tipo de Reporte: </label>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte"
+                                               value="informe" checked required>
+                                        Informe
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="radio" name="tipo_reporte"
+                                               value="preliminar">
+                                        Preliminar
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <input type="hidden" name="tabla_datos" id="tabla-datos" value="">
+                            <input type="hidden" name="origen" value="resumen-semanas">
+                            <button type="submit" class="btn btn-primary">Generar Reporte</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.tiny.cloud/1/q18zc748ct3jmuiuw5xh95uiwymtwme0cewb3dr138jpcgmc/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+(function() {
+    function initTinyMCE() {
+        if (typeof tinymce !== 'undefined' && document.readyState === 'complete') {
+            tinymce.init({
+                selector: 'textarea#conclusiones',
+                height: 300,
+                menubar: false,
+                plugins: [
+                    'advlist autolink lists link image charmap print preview anchor',
+                    'searchreplace visualblocks code fullscreen',
+                    'insertdatetime media table paste code help wordcount'
+                ],
+                toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+            });
+        } else {
+            setTimeout(initTinyMCE, 100);
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(initTinyMCE, 100); });
+    } else {
+        setTimeout(initTinyMCE, 100);
+    }
+})();
+</script>
+
+{% if info.resumenSemanas|length > 0 %}
+<script>
+function initSemanasChart() {
+    var canvas = document.getElementById('semanas-chart');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+
+    // Agrupar semanas por empleador (sumar repetidos)
+    var agrupado = {};
+    {% for resumen in info.resumenSemanas %}
+    (function() {
+        var nombre = '{{ resumen.nombreRazonSocial|e('js') }}';
+        var total = parseFloat('{{ resumen.total|default("0")|replace({",": "."}) }}') || 0;
+        if (agrupado[nombre]) {
+            agrupado[nombre] += total;
+        } else {
+            agrupado[nombre] = total;
+        }
+    })();
+    {% endfor %}
+
+    // Ordenar de mayor a menor semanas
+    var sorted = Object.entries(agrupado).sort(function(a, b) { return b[1] - a[1]; });
+    var empleadores = sorted.map(function(e) { return e[0].length > 30 ? e[0].substring(0, 30) + '...' : e[0]; });
+    var semanas = sorted.map(function(e) { return e[1]; });
+
+    var colores = [
+        '#28a745', '#20c997', '#17a2b8', '#007bff', '#6610f2',
+        '#e83e8c', '#fd7e14', '#ffc107', '#6f42c1', '#343a40',
+        '#198754', '#0dcaf0', '#6c757d', '#dc3545', '#0d6efd'
+    ];
+    // Repetir colores si hay más empleadores
+    while (colores.length < empleadores.length) {
+        colores = colores.concat(colores);
+    }
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: empleadores,
+            datasets: [{
+                label: 'Semanas Pagadas',
+                data: semanas,
+                backgroundColor: colores.slice(0, empleadores.length),
+                borderWidth: 0,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.x.toFixed(2) + ' semanas pagadas';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { font: { size: 12 } }
+                },
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Semanas Pagadas',
+                        font: { size: 13, weight: 'bold' }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Cargar Chart.js dinámicamente y luego inicializar
+if (typeof Chart !== 'undefined') {
+    initSemanasChart();
+} else {
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    script.onload = function() {
+        initSemanasChart();
+    };
+    script.onerror = function() {
+        console.error('No se pudo cargar Chart.js');
+    };
+    document.head.appendChild(script);
+}
+</script>
+{% endif %}
 {% endblock %}

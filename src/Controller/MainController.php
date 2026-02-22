@@ -587,8 +587,45 @@ class MainController extends AbstractController
         $em = $this->getDoctrine()->getManager();
         $info = $em->getRepository(Information::class)->findOneBy(['uniq_id' => $request->get('uniqid')]);
 
+        // Obtener datos de toda la vida (sin límite de meses)
+        $data_completo = $em->getRepository(Data::class)->getInfoListed($info->getId(), $info->getCotizacionAnio());
+        $table = $this->infoLiquidacion($data_completo, $info->getCotizacionAnio());
+
+        // Cálculos de liquidación (igual que resumenCompleto)
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
+        $salario = $this->ipcService->salarioMinimo($anioCotizacion);
+        $last = $em->getRepository(Data::class)->getLast($info);
+        $after = DateTime::createFromFormat('Y-m', $last->getPeriod());
+        $after->modify('+1 month');
+
+        $ad['Semanas Básicas'] = $semanas;
+        $ad['Sentencia C-197'] = ($info->isMujer() && $anioCotizacion >= 2026) ? 'Aplica' : 'No aplica';
+        $ad['Semanas Adicionales'] = 0;
+        $ad['Porcentaje Adicional'] = 0;
+        if ($info->getTotalWeeks() > $semanas) {
+            $ad['Semanas Adicionales'] = $info->getTotalWeeks() - $semanas;
+            $ad['Porcentaje Adicional'] = ((int)($ad['Semanas Adicionales'] / $this->ipcService->catalogo(self::ADICIONAL))) * $this->ipcService->catalogo(self::INCREMENTO_TAZA);
+        }
+        $ad['IBL'] = $table['resume']['total'] / $table['resume']['meses'];
+        $ad['S'] = $ad['IBL'] / $salario;
+        $ad['R'] = $this->ipcService->catalogo(self::TAZA_REEMPLAZO) - ($ad['S'] * $this->ipcService->catalogo(self::VARIACION_TAZA));
+        $ad['X'] = $ad['R'] + $ad['Porcentaje Adicional'];
+        $ad['R1'] = $ad['R'] * $ad['IBL'];
+        $ad['R2'] = $ad['X'] * $ad['IBL'];
+
+        $ad['IBL'] = '$&nbsp;' . number_format($ad['IBL'], 2);
+        $ad['S'] = number_format($ad['S'], 2);
+        $ad['R1'] = '$&nbsp;' . number_format($ad['R1'], 2);
+        $ad['R2'] = '$&nbsp;' . number_format($ad['R2'], 2);
+        $ad['R'] = number_format($ad['R'] * 100, 2) . '%';
+        $ad['X'] = number_format($ad['X'] * 100, 2) . '%';
+        $ad['Porcentaje Adicional'] = number_format($ad['Porcentaje Adicional'] * 100, 2) . '%';
+
         return $this->render('main/client/resumen-semanas.html.twig', [
                 'info' => $info,
+                'data_complete' => $table,
+                'ad' => $ad,
             ]
         );
     }
@@ -939,7 +976,38 @@ class MainController extends AbstractController
 
             $templateProcessor = new TemplateProcessor($plantilla);
 
-            $resume = $information->getResume();
+            // Si viene de resumen-semanas, recalcular con toda la vida
+            if ($request->get('origen') === 'resumen-semanas') {
+                $data_completo = $em->getRepository(Data::class)->getInfoListed($information->getId(), $information->getCotizacionAnio());
+                $table = $this->infoLiquidacion($data_completo, $information->getCotizacionAnio());
+                $anioCotizacion = (int)$information->getCotizacionAnio();
+                $semanas = $this->ipcService->semanasExigidas($information->getGenero(), $anioCotizacion);
+                $salario = $this->ipcService->salarioMinimo($anioCotizacion);
+
+                $resume = [];
+                $resume['Semanas Básicas'] = $semanas;
+                $resume['Semanas Adicionales'] = 0;
+                $resume['Porcentaje Adicional'] = 0;
+                if ($information->getTotalWeeks() > $semanas) {
+                    $resume['Semanas Adicionales'] = $information->getTotalWeeks() - $semanas;
+                    $resume['Porcentaje Adicional'] = ((int)($resume['Semanas Adicionales'] / $this->ipcService->catalogo(self::ADICIONAL))) * $this->ipcService->catalogo(self::INCREMENTO_TAZA);
+                }
+                $ibl = $table['resume']['total'] / $table['resume']['meses'];
+                $s = $ibl / $salario;
+                $r = $this->ipcService->catalogo(self::TAZA_REEMPLAZO) - ($s * $this->ipcService->catalogo(self::VARIACION_TAZA));
+                $x = $r + $resume['Porcentaje Adicional'];
+
+                $resume['IBL'] = '$&nbsp;' . number_format($ibl, 2);
+                $resume['S'] = number_format($s, 2);
+                $resume['R'] = number_format($r * 100, 2) . '%';
+                $resume['X'] = number_format($x * 100, 2) . '%';
+                $resume['R1'] = '$&nbsp;' . number_format($r * $ibl, 2);
+                $resume['R2'] = '$&nbsp;' . number_format($x * $ibl, 2);
+                $resume['Porcentaje Adicional'] = number_format($resume['Porcentaje Adicional'] * 100, 2) . '%';
+            } else {
+                $resume = $information->getResume();
+            }
+
             $vars = [
                 'nombre' => $information->getFullName(),
                 'documento' => $information->getIdentification(),
@@ -1014,7 +1082,10 @@ class MainController extends AbstractController
             $em->getConnection()->rollBack();
             $this->addFlash('error', $e->getMessage());
         }
-        return $this->redirectToRoute('client', ['uniqid' => $information->getUniqId()]);
+
+        // Redirigir a la vista de origen
+        $ruta = $request->get('origen') === 'resumen-semanas' ? 'resumen-semanas' : 'client';
+        return $this->redirectToRoute($ruta, ['uniqid' => $information->getUniqId()]);
     }
 
 
