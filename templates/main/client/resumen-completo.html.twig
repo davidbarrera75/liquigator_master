@@ -69,6 +69,13 @@
                     <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
                     <td class="text-end">{{ ad['R2']|raw }}</td>
                 </tr>
+                {% if ad['pension_minima']|default(false) %}
+                <tr>
+                    <td colspan="2">
+                        <small class="text-muted fst-italic">* Art. 35 Ley 100 de 1993: En ningún caso la pensión podrá ser inferior al salario mínimo legal mensual vigente.</small>
+                    </td>
+                </tr>
+                {% endif %}
 
             </table>
         </div>

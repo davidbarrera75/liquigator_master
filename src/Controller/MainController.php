@@ -531,6 +531,34 @@ class MainController extends AbstractController
         $salario = $this->ipcService->salarioMinimo($this->year);
         $last = $em->getRepository(Data::class)->getLast($info);
 
+        // Calcular liquidación de toda la vida
+        $anioCotizacion = (int)$info->getCotizacionAnio();
+        $semanas = $this->ipcService->semanasExigidas($info->getGenero(), $anioCotizacion);
+        $salarioCotizacion = $this->ipcService->salarioMinimo($anioCotizacion);
+        $data_completo = $em->getRepository(Data::class)->getInfoListed($info->getId(), $info->getCotizacionAnio());
+        $table_completo = $this->infoLiquidacion($data_completo, $info->getCotizacionAnio());
+
+        $ad_vida = [];
+        $ad_vida['Semanas Adicionales'] = 0;
+        $ad_vida['Porcentaje Adicional'] = 0;
+        if ($info->getTotalWeeks() > $semanas) {
+            $ad_vida['Semanas Adicionales'] = $info->getTotalWeeks() - $semanas;
+            $ad_vida['Porcentaje Adicional'] = ((int)($ad_vida['Semanas Adicionales'] / $this->ipcService->catalogo(self::ADICIONAL))) * $this->ipcService->catalogo(self::INCREMENTO_TAZA);
+        }
+        $ibl_vida = $table_completo['resume']['total'] / $table_completo['resume']['meses'];
+        $s_vida = $ibl_vida / $salarioCotizacion;
+        $r_vida = $this->ipcService->catalogo(self::TAZA_REEMPLAZO) - ($s_vida * $this->ipcService->catalogo(self::VARIACION_TAZA));
+        $x_vida = $r_vida + $ad_vida['Porcentaje Adicional'];
+        // Art. 35 Ley 100/1993: ninguna pensión puede ser inferior al SMMLV
+        $smmlv_vigente = $this->ipcService->salarioMinimo($this->year);
+        $r1_vida = $r_vida * $ibl_vida;
+        $r2_vida = $x_vida * $ibl_vida;
+        $ad_vida['pension_minima'] = $r2_vida < $smmlv_vigente;
+        $r2_vida = max($r2_vida, $smmlv_vigente);
+        $ad_vida['IBL'] = '$&nbsp;' . number_format($ibl_vida, 2);
+        $ad_vida['R1'] = '$&nbsp;' . number_format($r1_vida, 2);
+        $ad_vida['R2'] = '$&nbsp;' . number_format($r2_vida, 2);
+
         return $this->render('main/client/proyeccion.html.twig', [
                 'info' => $info,
                 'anio' => $info->getCotizacionAnio(),
@@ -538,8 +566,7 @@ class MainController extends AbstractController
                 'tope' => $this->ipcService->salarioMinimo($info->getCotizacionAnio(), true),
                 'lastRecord' => $last,
                 'ad' => $info->getResume(),
-
-
+                'ad_vida' => $ad_vida,
             ]
         );
     }
@@ -614,6 +641,11 @@ class MainController extends AbstractController
         $ad['R1'] = $ad['R'] * $ad['IBL'];
         $ad['R2'] = $ad['X'] * $ad['IBL'];
 
+        // Art. 35 Ley 100/1993: ninguna pensión puede ser inferior al SMMLV
+        $smmlv = $this->ipcService->salarioMinimo($this->year);
+        $ad['pension_minima'] = $ad['R2'] < $smmlv;
+        $ad['R2'] = max($ad['R2'], $smmlv);
+
         $ad['IBL'] = '$&nbsp;' . number_format($ad['IBL'], 2);
         $ad['S'] = number_format($ad['S'], 2);
         $ad['R1'] = '$&nbsp;' . number_format($ad['R1'], 2);
@@ -674,6 +706,10 @@ class MainController extends AbstractController
         $ad['R1'] = $ad['R'] * $ad['IBL'];
         $ad['R2'] = $ad['X'] * $ad['IBL'];
 
+        // Art. 35 Ley 100/1993: ninguna pensión puede ser inferior al SMMLV
+        $smmlv = $this->ipcService->salarioMinimo($this->year);
+        $ad['pension_minima'] = $ad['R2'] < $smmlv;
+        $ad['R2'] = max($ad['R2'], $smmlv);
 
         $ad['IBL'] = '$&nbsp;' . number_format($ad['IBL'], 2);
         $ad['S'] = number_format($ad['S'], 2);
@@ -837,6 +873,10 @@ class MainController extends AbstractController
         $ad['R1'] = $ad['R'] * $ad['IBL'];
         $ad['R2'] = $ad['X'] * $ad['IBL'];
 
+        // Art. 35 Ley 100/1993: ninguna pensión puede ser inferior al SMMLV
+        $smmlv = $this->ipcService->salarioMinimo($this->year);
+        $ad['pension_minima'] = $ad['R2'] < $smmlv;
+        $ad['R2'] = max($ad['R2'], $smmlv);
 
         $ad['IBL'] = '$&nbsp;' . number_format($ad['IBL'], 2);
         $ad['S'] = number_format($ad['S'], 2);
@@ -1283,11 +1323,24 @@ class MainController extends AbstractController
         }
         $semanas_ = (360 / 7) / 12;
         $semanas_dif = $total_meses_proyeccion * $semanas_;
-        $data = $em->getRepository(Data::class)->getInfoListed(
-            $info->getId(),
-            $ipc->getAnio(),
-            $total_meses_proyeccion > 120 ? 120 : (120 - $total_meses_proyeccion)
-        );
+
+        // Determinar base de cálculo: últimos 10 años o toda la vida
+        $baseCalculo = $req['base_calculo'] ?? '10_anios';
+
+        if ($baseCalculo === 'toda_la_vida') {
+            // Sin LIMIT: toda la vida laboral
+            $data = $em->getRepository(Data::class)->getInfoListed(
+                $info->getId(),
+                $ipc->getAnio()
+            );
+        } else {
+            // LIMIT 120: últimos 10 años (comportamiento original)
+            $data = $em->getRepository(Data::class)->getInfoListed(
+                $info->getId(),
+                $ipc->getAnio(),
+                $total_meses_proyeccion > 120 ? 120 : (120 - $total_meses_proyeccion)
+            );
+        }
 
         $data = array_merge($data, $arr);
         $table = $this->infoLiquidacion($data, $ipc->getAnio());
@@ -1301,6 +1354,7 @@ class MainController extends AbstractController
         $data = [];
         $data['proyeccion'] = $arr;
         $data['meses'] = $total_meses_proyeccion;
+        $data['base_calculo'] = $baseCalculo;
         $data['fechaInicial'] = $fechaInicialProyeccion ? $fechaInicialProyeccion->format('Y-m') : null;
         $data['fechaFinal'] = $fechaFinalProyeccion ? $fechaFinalProyeccion->format('Y-m') : null;
         $data['data'] = $table;
@@ -1314,6 +1368,10 @@ class MainController extends AbstractController
         $data['r1'] = $data['r'] * $data['ibl'];
         $data['r2'] = $data['x'] * $data['ibl'];
 
+        // Art. 35 Ley 100/1993: ninguna pensión puede ser inferior al SMMLV
+        $smmlv_vigente = $this->ipcService->salarioMinimo($this->year);
+        $data['pension_minima'] = $data['r2'] < $smmlv_vigente;
+        $data['r2'] = max($data['r2'], $smmlv_vigente);
 
         $proyeccion = new Proyeccion();
         $proyeccion->setInformation($info)

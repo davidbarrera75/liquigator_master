@@ -14,6 +14,11 @@
                                 <div class="card">
                                     <div class="card-header bg-dark text-white text-center text-uppercase">
                                         {{ p.titulo }}
+                                        {% if p.jsonData.base_calculo|default('10_anios') == 'toda_la_vida' %}
+                                            <span class="badge bg-success ms-1">Toda la Vida</span>
+                                        {% else %}
+                                            <span class="badge bg-primary ms-1">10 Años</span>
+                                        {% endif %}
                                     </div>
                                     <div class="card-body bg-light">
                                         <div class="row">
@@ -78,6 +83,13 @@
                                                     <td class="text-right">
                                                         $&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
                                                 </tr>
+                                                {% if p.jsonData.pension_minima|default(false) %}
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <small class="text-muted fst-italic">* Art. 35 Ley 100/1993: Pensión ajustada al SMMLV.</small>
+                                                    </td>
+                                                </tr>
+                                                {% endif %}
 
                                             </table>
                                         </div>
@@ -160,6 +172,13 @@
                                                         <th>Pensión Total <small>(Tomando el total de semanas)</small></th>
                                                         <td class="text-end fw-bold">$&nbsp;{{ p.jsonData.r2|number_format(2) }}</td>
                                                     </tr>
+                                                    {% if p.jsonData.pension_minima|default(false) %}
+                                                    <tr>
+                                                        <td colspan="2">
+                                                            <small class="text-muted fst-italic">* Art. 35 Ley 100 de 1993: En ningún caso la pensión podrá ser inferior al salario mínimo legal mensual vigente.</small>
+                                                        </td>
+                                                    </tr>
+                                                    {% endif %}
                                                 </table>
                                             {% endblock %}
                                         {% endembed %}
@@ -191,15 +210,59 @@
                             <th>Aporte de última pensión</th>
                             <td class="text-right">$ {{ lastRecord.val|number_format(0) }}</td>
                         </tr>
-                        {% for key,value in ad %}
-                            {% if key == 'R2' %}
-                                <tr>
-                                    <th>Pensión Actual</th>
-                                    <td class="text-right">{{ value|raw }}</td>
-                                </tr>
-                            {% endif %}
-                        {% endfor %}
                     </table>
+
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white py-2">
+                            <small class="fw-bold">Últimos 10 Años</small>
+                        </div>
+                        <div class="card-body p-2">
+                            <table class="table table-sm mb-0">
+                                {% for key,value in ad %}
+                                    {% if key == 'IBL' %}
+                                    <tr>
+                                        <th><small>IBL</small></th>
+                                        <td class="text-right"><small>{{ value|raw }}</small></td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if key == 'R1' %}
+                                    <tr>
+                                        <th><small>Pensión Básica</small></th>
+                                        <td class="text-right"><small>{{ value|raw }}</small></td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if key == 'R2' %}
+                                    <tr class="table-primary">
+                                        <th><small>Pensión Total</small></th>
+                                        <td class="text-right"><small class="fw-bold">{{ value|raw }}</small></td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 border-success">
+                        <div class="card-header bg-success text-white py-2">
+                            <small class="fw-bold">Toda la Vida</small>
+                        </div>
+                        <div class="card-body p-2">
+                            <table class="table table-sm mb-0">
+                                <tr>
+                                    <th><small>IBL</small></th>
+                                    <td class="text-right"><small>{{ ad_vida.IBL|raw }}</small></td>
+                                </tr>
+                                <tr>
+                                    <th><small>Pensión Básica</small></th>
+                                    <td class="text-right"><small>{{ ad_vida.R1|raw }}</small></td>
+                                </tr>
+                                <tr class="table-success">
+                                    <th><small>Pensión Total</small></th>
+                                    <td class="text-right"><small class="fw-bold">{{ ad_vida.R2|raw }}</small></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -228,6 +291,45 @@
                         </tr>
                         </tfoot>
                     </table>
+                    <div class="col-lg-12 mb-3">
+                        <label class="form-label fw-bold">Base de Cálculo</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="card base-option border-primary selected" for="base_10" id="label_base_10">
+                                    <input class="d-none" type="radio" name="base_calculo" id="base_10" value="10_anios" checked>
+                                    <div class="card-header bg-primary text-white py-1 text-center">
+                                        <small class="fw-bold">Últimos 10 Años</small>
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block">Pensión Actual</small>
+                                        <span class="fw-bold">
+                                            {% for key,value in ad %}
+                                                {% if key == 'R2' %}{{ value|raw }}{% endif %}
+                                            {% endfor %}
+                                        </span>
+                                        <small class="text-muted d-block mt-1">IBL:
+                                            {% for key,value in ad %}
+                                                {% if key == 'IBL' %}{{ value|raw }}{% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label class="card base-option" for="base_vida" id="label_base_vida">
+                                    <input class="d-none" type="radio" name="base_calculo" id="base_vida" value="toda_la_vida">
+                                    <div class="card-header bg-light py-1 text-center">
+                                        <small class="fw-bold">Toda la Vida</small>
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block">Pensión Actual</small>
+                                        <span class="fw-bold">{{ ad_vida.R2|raw }}</span>
+                                        <small class="text-muted d-block mt-1">IBL: {{ ad_vida.IBL|raw }}</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-lg-12">
                         <div class="form-group">
                             <label for="titulo">Titulo</label>
@@ -253,6 +355,20 @@
     <script>
         $(function () {
             'use strict';
+
+            // Selección visual de base de cálculo
+            $('input[name="base_calculo"]').on('change', function() {
+                $('.base-option').removeClass('selected border-primary border-success');
+                $('.base-option .card-header').removeClass('bg-primary bg-success text-white').addClass('bg-light');
+                var $label = $(this).closest('.base-option');
+                if ($(this).val() === 'toda_la_vida') {
+                    $label.addClass('selected border-success');
+                    $label.find('.card-header').removeClass('bg-light').addClass('bg-success text-white');
+                } else {
+                    $label.addClass('selected border-primary');
+                    $label.find('.card-header').removeClass('bg-light').addClass('bg-primary text-white');
+                }
+            });
 
             function dates($element) {
                 $element.daterangepicker({
@@ -405,4 +521,9 @@
     </script>
 {% endblock %}
 {% block stylesheets %}
+    <style>
+        .base-option { cursor: pointer; transition: all 0.2s; opacity: 0.6; }
+        .base-option.selected { opacity: 1; box-shadow: 0 0 0 2px currentColor; }
+        .base-option:hover { opacity: 0.9; }
+    </style>
 {% endblock %}

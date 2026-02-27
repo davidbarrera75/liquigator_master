@@ -55,6 +55,16 @@
 **Fix**: Agregado salario mínimo $1,750,905 y corregido IPC al 2.2%
 **Documentación**: Ver `/var/www/liquigator/ACTUALIZACION_2026.md`
 
+### ✅ Proyección con base "Toda la Vida" (2026-02-27)
+**Necesidad**: Solo se podía proyectar desde últimos 10 años
+**Fix**: Agregada opción de base de cálculo (10 años o toda la vida) con tarjetas visuales en el modal
+**Archivos**: `MainController.php` (GET y POST de proyección), `proyeccion.html.twig`
+
+### ✅ Piso pensión mínima Art. 35 Ley 100/1993 (2026-02-27)
+**Regla**: Ninguna pensión puede ser inferior al SMMLV
+**Fix**: R1 (básica) muestra valor real. R2 (total) se ajusta al SMMLV si es inferior, con nota legal
+**Alcance**: Aplicado en 5 métodos del controller y 4 templates
+
 ---
 
 ## Comandos Esenciales
@@ -109,6 +119,8 @@ ssh root@72.61.36.170
 - [x] Claude ve TODOS los datos de cotización
 - [x] Optimización de tokens con resumen estadístico
 - [x] Datos 2026 actualizados (salario mínimo + IPC)
+- [x] Proyección con base "Toda la Vida" (además de últimos 10 años)
+- [x] Piso pensión mínima: R2 nunca inferior al SMMLV (Art. 35 Ley 100/1993)
 
 ---
 
